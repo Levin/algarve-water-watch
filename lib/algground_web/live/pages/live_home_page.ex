@@ -67,7 +67,7 @@ defmodule AlggroundWeb.LiveHomePage do
   def render(assigns) do
     ~H"""
     <div>
-      <div class="bg-gray-50 py-12 sm:py-6 rounded-lg">
+      <div class="bg-gray-50 py-6 sm:py-6 rounded-lg">
         <div class="mx-auto max-w-2xl px-6 lg:max-w-7xl lg:px-8">
           <p class="mx-auto max-w-lg text-pretty text-center font-medium tracking-tight text-gray-400 text-3xl">
             <%= @date %>
