@@ -17,9 +17,10 @@ defmodule AlggroundWeb.Components.Region do
       phx-target={@myself}
       600
       phx-click={JS.toggle(to: "#information_#{@region.region}")}
-      class="py-4 cursor-pointer text-center text-base font-semibold text-indigo-800 mb-2 bg-gray-50 rounded-lg "
+      class="py-4 cursor-pointer text-center text-base font-semibold text-indigo-800 mb-2 bg-gray-50 rounded-lg"
     >
       <%= display_region(assigns) %>
+      <img src={@region.image} class="absolute h-14 left-8 top-9 " />
 
       <div id={"information_" <> @region.region} class="hidden">
         <div class=" mb-8">
@@ -103,21 +104,21 @@ defmodule AlggroundWeb.Components.Region do
       assigns.region.rainfall >= 80 ->
         ~H"""
         <p class="mt-2 max-w-lg text-lg/6 text-green-600 max-lg:text-center">
-          <%= @region.rainfall %>mm
+          <%= @region.rainfall %>ml
         </p>
         """
 
       assigns.region.rainfall < 80 and assigns.region.rainfall >= 30 ->
         ~H"""
         <p class="mt-2 max-w-lg text-lg/6 text-amber-500 max-lg:text-center">
-          <%= @region.rainfall %>mm
+          <%= @region.rainfall %>ml
         </p>
         """
 
       assigns.region.rainfall < 30 ->
         ~H"""
         <p class="mt-2 max-w-lg text-lg/6 text-red-600 max-lg:text-center">
-          <%= @region.rainfall %>mm
+          <%= @region.rainfall %>ml
         </p>
         """
     end
@@ -128,21 +129,21 @@ defmodule AlggroundWeb.Components.Region do
       assigns.region.reservoir >= 6_000_000 ->
         ~H"""
         <p class="mt-2 max-w-lg text-lg/6 text-green-600 max-lg:text-center">
-          <%= @region.reservoir %>l
+          <%= @region.reservoir %> 10⁶m³
         </p>
         """
 
       assigns.region.reservoir < 6_000_000 and assigns.region.reservoir >= 1_200_000 ->
         ~H"""
         <p class="mt-2 max-w-lg text-lg/6 text-amber-500 max-lg:text-center">
-          <%= @region.reservoir %>l
+          <%= @region.reservoir %> 10⁶m³
         </p>
         """
 
       assigns.region.reservoir < 1_200_000 ->
         ~H"""
         <p class="mt-2 max-w-lg text-lg/6 text-red-600 max-lg:text-center">
-          <%= @region.reservoir %>l
+          <%= @region.reservoir %> 10⁶m³
         </p>
         """
     end

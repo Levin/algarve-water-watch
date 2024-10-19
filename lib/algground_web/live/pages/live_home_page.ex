@@ -2,32 +2,32 @@ defmodule AlggroundWeb.LiveHomePage do
   use AlggroundWeb, :live_view
 
   @region_names [
-    "Albufeira",
-    "Alcoutim",
-    "Aljezur",
-    "Castro Marim",
-    "Faro",
-    "Lagoa",
-    "Lagos",
-    "Loulé",
-    "Monchique",
-    "Olhão",
-    "Portimão",
-    "São Brás de Alportel",
-    "Silves",
-    "Tavira",
-    "Vila do Bispo",
-    "Vila Real de Santo António"
+    %{region: "Albufeira", image: "/images/albufeira.svg"},
+    %{region: "Alcoutim", image: ""},
+    %{region: "Aljezur", image: ""},
+    %{region: "Castro Marim", image: ""},
+    %{region: "Faro", image: ""},
+    %{region: "Lagoa", image: ""},
+    %{region: "Lagos", image: ""},
+    %{region: "Monchique", image: ""},
+    %{region: "Olhão", image: ""},
+    %{region: "Portimão", image: ""},
+    %{region: "São Brás de Alportel", image: ""},
+    %{region: "Silves", image: ""},
+    %{region: "Tavira", image: ""},
+    %{region: "Vila do Bispo", image: ""},
+    %{region: "Vila Real de Santo António", image: ""}
   ]
 
   def mount(_params, _session, socket) do
     regions =
       Enum.map(@region_names, fn region ->
         %{
-          region: region,
+          region: region.region,
           groundwater: trunc(:rand.uniform() * 100),
           rainfall: trunc(:rand.uniform() * 100),
-          reservoir: trunc(:rand.uniform() * 10_000_000)
+          reservoir: trunc(:rand.uniform() * 10_000_000),
+          image: region.image
         }
       end)
 
@@ -48,10 +48,11 @@ defmodule AlggroundWeb.LiveHomePage do
     regions =
       Enum.map(@region_names, fn region ->
         %{
-          region: region,
+          region: region.region,
           groundwater: trunc(:rand.uniform() * 100),
           rainfall: trunc(:rand.uniform() * 100),
-          reservoir: trunc(:rand.uniform() * 10_000_000)
+          reservoir: trunc(:rand.uniform() * 10_000_000),
+          image: region.image
         }
       end)
 
@@ -160,21 +161,21 @@ defmodule AlggroundWeb.LiveHomePage do
       assigns.rainfall >= 80 ->
         ~H"""
         <p class="mt-2 max-w-lg text-lg/6 text-green-600 max-lg:text-center">
-          <%= @rainfall %>mm
+          <%= @rainfall %>ml
         </p>
         """
 
       assigns.rainfall < 80 and assigns.rainfall >= 30 ->
         ~H"""
         <p class="mt-2 max-w-lg text-lg/6 text-amber-500 max-lg:text-center">
-          <%= @rainfall %>mm
+          <%= @rainfall %>ml
         </p>
         """
 
       assigns.rainfall < 30 ->
         ~H"""
         <p class="mt-2 max-w-lg text-lg/6 text-red-600 max-lg:text-center">
-          <%= @rainfall %>mm
+          <%= @rainfall %>ml
         </p>
         """
     end
@@ -185,21 +186,21 @@ defmodule AlggroundWeb.LiveHomePage do
       assigns.reservoirs >= 6_000_000 ->
         ~H"""
         <p class="mt-2 max-w-lg text-lg/6 text-green-600 max-lg:text-center">
-          <%= @reservoirs %>l
+          <%= @reservoirs %>10⁶m³
         </p>
         """
 
       assigns.reservoirs < 6_000_000 and assigns.reservoirs >= 1_200_000 ->
         ~H"""
         <p class="mt-2 max-w-lg text-lg/6 text-amber-500 max-lg:text-center">
-          <%= @reservoirs %>l
+          <%= @reservoirs %> 10⁶m³
         </p>
         """
 
       assigns.reservoirs < 1_200_000 ->
         ~H"""
         <p class="mt-2 max-w-lg text-lg/6 text-red-600 max-lg:text-center">
-          <%= @reservoirs %>l
+          <%= @reservoirs %>10⁶m³
         </p>
         """
     end
