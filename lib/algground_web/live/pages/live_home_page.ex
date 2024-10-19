@@ -1,29 +1,67 @@
 defmodule AlggroundWeb.LiveHomePage do
   use AlggroundWeb, :live_view
 
+  @region_names [
+    "Albufeira",
+    "Alcoutim",
+    "Aljezur",
+    "Castro Marim",
+    "Faro",
+    "Lagoa",
+    "Lagos",
+    "Loulé",
+    "Monchique",
+    "Olhão",
+    "Portimão",
+    "São Brás de Alportel",
+    "Silves",
+    "Tavira",
+    "Vila do Bispo",
+    "Vila Real de Santo António"
+  ]
+
   def mount(_params, _session, socket) do
-    regions = [
-      "Albufeira",
-      "Alcoutim",
-      "Aljezur",
-      "Castro Marim",
-      "Faro",
-      "Lagoa",
-      "Lagos",
-      "Loulé",
-      "Monchique",
-      "Olhão",
-      "Portimão",
-      "São Brás de Alportel",
-      "Silves",
-      "Tavira",
-      "Vila do Bispo",
-      "Vila Real de Santo António"
-    ]
+    regions =
+      Enum.map(@region_names, fn region ->
+        %{
+          region: region,
+          groundwater: trunc(:rand.uniform() * 100),
+          rainfall: trunc(:rand.uniform() * 100),
+          reservoir: trunc(:rand.uniform() * 10_000_000)
+        }
+      end)
+
+    Process.send_after(self(), "new_values", 2_000)
 
     {:ok,
      socket
-     |> assign(:regions, regions)}
+     |> assign(:date, Date.utc_today())
+     |> assign(:regions, regions)
+     |> assign(:groundwater, trunc(:rand.uniform() * 100))
+     |> assign(:rainfall, trunc(:rand.uniform() * 100))
+     |> assign(:reservoirs, trunc(:rand.uniform() * 10_000_000))}
+  end
+
+  def handle_info("new_values", socket) do
+    Process.send_after(self(), "new_values", 2_000)
+
+    regions =
+      Enum.map(@region_names, fn region ->
+        %{
+          region: region,
+          groundwater: trunc(:rand.uniform() * 100),
+          rainfall: trunc(:rand.uniform() * 100),
+          reservoir: trunc(:rand.uniform() * 10_000_000)
+        }
+      end)
+
+    {:noreply,
+     socket
+     |> assign(:regions, regions)
+     |> assign(:date, Date.add(socket.assigns.date, 31))
+     |> assign(:groundwater, trunc(:rand.uniform() * 100))
+     |> assign(:rainfall, trunc(:rand.uniform() * 100))
+     |> assign(:reservoirs, trunc(:rand.uniform() * 10_000_000))}
   end
 
   def render(assigns) do
@@ -31,11 +69,14 @@ defmodule AlggroundWeb.LiveHomePage do
     <div>
       <div class="bg-gray-50 py-12 sm:py-6 rounded-lg">
         <div class="mx-auto max-w-2xl px-6 lg:max-w-7xl lg:px-8">
+          <p class="mx-auto max-w-lg text-pretty text-center font-medium tracking-tight text-gray-400 text-3xl">
+            <%= @date %>
+          </p>
           <p class="mx-auto max-w-lg text-pretty text-center  font-medium tracking-tight text-gray-950 text-3xl">
             Albufeira
           </p>
-          <p class="mx-auto max-w-lg text-pretty text-center text-4xl font-medium tracking-tight text-gray-950 sm:text-3xl text-indigo-800">
-            20mm
+          <p class="mx-auto max-w-lg text-pretty text-center text-4xl font-medium tracking-tight text-gray-950 sm:text-3xl ">
+            <%= display_groundwater(assigns) %>
           </p>
           <p class="mx-auto max-w-lg text-pretty text-center font-sm tracking-tight text-gray-400 text-sm">
             Ground Water Level
@@ -50,7 +91,7 @@ defmodule AlggroundWeb.LiveHomePage do
                       Rainfall
                     </p>
                     <p class="mt-2 max-w-lg text-lg/6 text-gray-600 max-lg:text-center text-indigo-800">
-                      40mm
+                      <%= display_rainfall(assigns) %>
                     </p>
                   </div>
                   <div class="px-8 pt-8 sm:px-10 sm:pt-10">
@@ -58,7 +99,7 @@ defmodule AlggroundWeb.LiveHomePage do
                       Reservoirs
                     </p>
                     <p class="mt-2 max-w-lg text-lg/6 text-gray-600 max-lg:text-center text-indigo-800">
-                      200.000.000.000l
+                      <%= display_reservoirs(assigns) %>
                     </p>
                   </div>
                 </div>
@@ -71,15 +112,11 @@ defmodule AlggroundWeb.LiveHomePage do
             <div class="absolute inset-px rounded-lg bg-white lg:rounded-l-[2rem]"></div>
             <div class="relative flex h-full flex-col overflow-hidden rounded-[calc(theme(borderRadius.lg)+1px)] lg:rounded-l-[calc(2rem+1px)]">
               <div class="px-8 pb-3 pt-8 sm:px-10 sm:pb-0 sm:pt-10">
-                <p class="mt-2 text-lg/7 font-medium tracking-tight text-gray-950 max-lg:text-center">
-                  See other Regions
-                </p>
-
                 <%= for region <- @regions do %>
                   <.live_component
                     module={AlggroundWeb.Components.Region}
                     region={region}
-                    id={region <> "#{System.unique_integer()}"}
+                    id={region.region <> "#{System.unique_integer()}"}
                   />
                 <% end %>
               </div>
@@ -91,5 +128,80 @@ defmodule AlggroundWeb.LiveHomePage do
       </div>
     </div>
     """
+  end
+
+  defp display_groundwater(assigns) do
+    cond do
+      assigns.groundwater >= 150 ->
+        ~H"""
+        <p class="mt-2 max-w-lg text-lg/6 text-green-600 max-lg:text-center">
+          <%= @groundwater %>m
+        </p>
+        """
+
+      assigns.groundwater < 150 and assigns.groundwater >= 50 ->
+        ~H"""
+        <p class="mt-2 max-w-lg text-lg/6 text-amber-500 max-lg:text-center">
+          <%= @groundwater %>m
+        </p>
+        """
+
+      assigns.groundwater < 50 ->
+        ~H"""
+        <p class="mt-2 max-w-lg text-lg/6 text-red-600 max-lg:text-center">
+          <%= @groundwater %>m
+        </p>
+        """
+    end
+  end
+
+  defp display_rainfall(assigns) do
+    cond do
+      assigns.rainfall >= 80 ->
+        ~H"""
+        <p class="mt-2 max-w-lg text-lg/6 text-green-600 max-lg:text-center">
+          <%= @rainfall %>mm
+        </p>
+        """
+
+      assigns.rainfall < 80 and assigns.rainfall >= 30 ->
+        ~H"""
+        <p class="mt-2 max-w-lg text-lg/6 text-amber-500 max-lg:text-center">
+          <%= @rainfall %>mm
+        </p>
+        """
+
+      assigns.rainfall < 30 ->
+        ~H"""
+        <p class="mt-2 max-w-lg text-lg/6 text-red-600 max-lg:text-center">
+          <%= @rainfall %>mm
+        </p>
+        """
+    end
+  end
+
+  defp display_reservoirs(assigns) do
+    cond do
+      assigns.reservoirs >= 6_000_000 ->
+        ~H"""
+        <p class="mt-2 max-w-lg text-lg/6 text-green-600 max-lg:text-center">
+          <%= @reservoirs %>l
+        </p>
+        """
+
+      assigns.reservoirs < 6_000_000 and assigns.reservoirs >= 1_200_000 ->
+        ~H"""
+        <p class="mt-2 max-w-lg text-lg/6 text-amber-500 max-lg:text-center">
+          <%= @reservoirs %>l
+        </p>
+        """
+
+      assigns.reservoirs < 1_200_000 ->
+        ~H"""
+        <p class="mt-2 max-w-lg text-lg/6 text-red-600 max-lg:text-center">
+          <%= @reservoirs %>l
+        </p>
+        """
+    end
   end
 end
