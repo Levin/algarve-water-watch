@@ -74,7 +74,7 @@ defmodule AlggroundWeb.LiveHomePage do
             <%= Datex.Date.format_date(@date, "DD/MM/YYYY") %>
           </p>
           <p class="mx-auto max-w-lg text-pretty text-center  font-medium tracking-tight text-gray-950 text-3xl">
-            Albufeira
+            <%= Enum.random(@regions).region %>
           </p>
           <p class="mx-auto max-w-lg text-pretty text-center text-4xl font-medium tracking-tight text-gray-950 sm:text-3xl ">
             <%= display_groundwater(assigns) %>
@@ -84,7 +84,6 @@ defmodule AlggroundWeb.LiveHomePage do
           </p>
           <div class="mt-10 grid gap-4 sm:mt-4 ">
             <div class="relative mb-4">
-              <div class="absolute inset-px bg-white rounded-t-[2rem]"></div>
               <div class="relative flex h-full flex-col overflow-hidden rounded-[calc(2rem+1px)]">
                 <div class="flex justify-evenly mb-8">
                   <div class="px-8 pt-8 sm:px-10 sm:pt-10">
@@ -109,6 +108,7 @@ defmodule AlggroundWeb.LiveHomePage do
               </div>
             </div>
           </div>
+          <div class="mb-4"></div>
           <div class="relative">
             <div class="absolute inset-px rounded-lg bg-white lg:rounded-l-[2rem]"></div>
             <div class="relative flex h-full flex-col overflow-hidden rounded-[calc(theme(borderRadius.lg)+1px)] lg:rounded-l-[calc(2rem+1px)]">

@@ -11,6 +11,7 @@ defmodule AlggroundWeb.Components.Region do
      |> assign(:region, region)}
   end
 
+  # <img src={@region.image} class="absolute h-14 left-0 top-9 " />
   def render(assigns) do
     ~H"""
     <div
@@ -20,7 +21,6 @@ defmodule AlggroundWeb.Components.Region do
       class="py-4 cursor-pointer text-center text-base font-semibold text-indigo-800 mb-2 bg-gray-50 rounded-lg"
     >
       <%= display_region(assigns) %>
-      <img src={@region.image} class="absolute h-14 left-0 top-9 " />
 
       <div id={"information_" <> @region.region} class="hidden">
         <div class=" mb-8">
