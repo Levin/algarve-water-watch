@@ -31,7 +31,7 @@ defmodule AlggroundWeb.LiveHomePage do
         }
       end)
 
-    Process.send_after(self(), "new_values", 2_000)
+    Process.send_after(self(), "new_values", 30_000)
 
     {:ok,
      socket
@@ -43,7 +43,7 @@ defmodule AlggroundWeb.LiveHomePage do
   end
 
   def handle_info("new_values", socket) do
-    Process.send_after(self(), "new_values", 2_000)
+    Process.send_after(self(), "new_values", 30_000)
 
     regions =
       Enum.map(@region_names, fn region ->
