@@ -134,21 +134,21 @@ defmodule AlggroundWeb.LiveHomePage do
     cond do
       assigns.groundwater >= 150 ->
         ~H"""
-        <p class="mt-2 max-w-lg text-lg/6 text-green-600 max-lg:text-center">
+        <p class="mt-2 mx-auto flex justify-center text-lg/6 text-green-600 ">
           <%= @groundwater %>m
         </p>
         """
 
       assigns.groundwater < 150 and assigns.groundwater >= 50 ->
         ~H"""
-        <p class="mt-2 max-w-lg text-lg/6 text-amber-500 max-lg:text-center">
+        <p class="mt-2 mx-auto flex justify-center text-lg/6 text-green-600 ">
           <%= @groundwater %>m
         </p>
         """
 
       assigns.groundwater < 50 ->
         ~H"""
-        <p class="mt-2 max-w-lg text-lg/6 text-red-600 max-lg:text-center">
+        <p class="mt-2 mx-auto flex justify-center text-lg/6 text-green-600 ">
           <%= @groundwater %>m
         </p>
         """
