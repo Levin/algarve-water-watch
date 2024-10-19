@@ -35,7 +35,7 @@ defmodule AlggroundWeb.LiveHomePage do
 
     {:ok,
      socket
-     |> assign(:date, Date.utc_today())
+     |> assign(:date, Datex.Date.today())
      |> assign(:regions, regions)
      |> assign(:groundwater, trunc(:rand.uniform() * 100))
      |> assign(:rainfall, trunc(:rand.uniform() * 100))
@@ -58,7 +58,7 @@ defmodule AlggroundWeb.LiveHomePage do
     {:noreply,
      socket
      |> assign(:regions, regions)
-     |> assign(:date, Date.add(socket.assigns.date, 31))
+     |> assign(:date, Datex.Date.add(socket.assigns.date, 31))
      |> assign(:groundwater, trunc(:rand.uniform() * 100))
      |> assign(:rainfall, trunc(:rand.uniform() * 100))
      |> assign(:reservoirs, trunc(:rand.uniform() * 10_000_000))}
@@ -70,7 +70,7 @@ defmodule AlggroundWeb.LiveHomePage do
       <div class="bg-gray-50 py-6 sm:py-6 rounded-lg">
         <div class="mx-auto max-w-2xl px-6 lg:max-w-7xl lg:px-8">
           <p class="mx-auto max-w-lg text-pretty text-center font-medium tracking-tight text-gray-400 text-3xl">
-            <%= @date %>
+            <%= Datex.Date.format_date(@date, "DD/MM/YYYY") %>
           </p>
           <p class="mx-auto max-w-lg text-pretty text-center  font-medium tracking-tight text-gray-950 text-3xl">
             Albufeira

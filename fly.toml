@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for algground on 2024-10-19T10:38:07Z
+# fly.toml app configuration file generated for aww on 2024-10-19T15:46:50Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'algground'
+app = 'aww'
 primary_region = 'mad'
 kill_signal = 'SIGTERM'
 
@@ -13,7 +13,7 @@ kill_signal = 'SIGTERM'
   release_command = '/app/bin/migrate'
 
 [env]
-  PHX_HOST = 'algground.fly.dev'
+  PHX_HOST = 'aww.fly.dev'
   PORT = '8080'
 
 [http_service]
