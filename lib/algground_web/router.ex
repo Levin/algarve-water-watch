@@ -17,7 +17,7 @@ defmodule AlggroundWeb.Router do
   scope "/", AlggroundWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    live "/", LiveHomePage
   end
 
   # Other scopes may use custom stacks.
