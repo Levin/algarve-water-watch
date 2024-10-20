@@ -31,8 +31,6 @@ defmodule AlggroundWeb.LiveHomePage do
         }
       end)
 
-    Process.send_after(self(), "new_values", 5_000)
-
     generated_groundwaterlevels =
       1..40
       |> Enum.to_list()
@@ -65,8 +63,6 @@ defmodule AlggroundWeb.LiveHomePage do
   end
 
   def handle_info("new_values", socket) do
-    Process.send_after(self(), "new_values", 5_000)
-
     groundwater = trunc(:rand.uniform() * 100)
     rainfall = trunc(:rand.uniform() * 100)
     reservoir = trunc(:rand.uniform() * 10_000_000)
@@ -120,18 +116,93 @@ defmodule AlggroundWeb.LiveHomePage do
      |> assign(:display_reservoir, true)}
   end
 
+  def handle_event("backward", _params, socket) do
+    groundwater = trunc(:rand.uniform() * 100)
+    rainfall = trunc(:rand.uniform() * 100)
+    reservoir = trunc(:rand.uniform() * 10_000_000)
+
+    regions =
+      Enum.map(@region_names, fn region ->
+        %{
+          region: region.region,
+          groundwater: groundwater,
+          rainfall: rainfall,
+          reservoir: reservoir,
+          image: region.image
+        }
+      end)
+
+    new_groundwaters = maybe_add_value(socket.assigns.groundwater_levels ++ [groundwater])
+    new_rainfalls = maybe_add_value(socket.assigns.rainfall_levels ++ [rainfall])
+    new_reservoirs = maybe_add_value(socket.assigns.reservoir_levels ++ [reservoir])
+
+    {:noreply,
+     socket
+     |> assign(:groundwater_levels, new_groundwaters)
+     |> assign(:rainfall_levels, new_rainfalls)
+     |> assign(:reservoir_levels, new_reservoirs)
+     |> assign(:regions, regions)
+     |> assign(:date_start, Datex.Date.add(socket.assigns.date_start, 92))
+     |> assign(:date_end, Datex.Date.add(socket.assigns.date_end, 92))
+     |> assign(:groundwater, trunc(:rand.uniform() * 100))
+     |> assign(:rainfall, trunc(:rand.uniform() * 100))
+     |> assign(:reservoirs, trunc(:rand.uniform() * 10_000_000))}
+  end
+
+  def handle_event("forward", _params, socket) do
+    groundwater = trunc(:rand.uniform() * 100)
+    rainfall = trunc(:rand.uniform() * 100)
+    reservoir = trunc(:rand.uniform() * 10_000_000)
+
+    regions =
+      Enum.map(@region_names, fn region ->
+        %{
+          region: region.region,
+          groundwater: groundwater,
+          rainfall: rainfall,
+          reservoir: reservoir,
+          image: region.image
+        }
+      end)
+
+    new_groundwaters = maybe_add_value(socket.assigns.groundwater_levels ++ [groundwater])
+    new_rainfalls = maybe_add_value(socket.assigns.rainfall_levels ++ [rainfall])
+    new_reservoirs = maybe_add_value(socket.assigns.reservoir_levels ++ [reservoir])
+
+    {:noreply,
+     socket
+     |> assign(:groundwater_levels, new_groundwaters)
+     |> assign(:rainfall_levels, new_rainfalls)
+     |> assign(:reservoir_levels, new_reservoirs)
+     |> assign(:regions, regions)
+     |> assign(:date_start, Datex.Date.add(socket.assigns.date_start, 92))
+     |> assign(:date_end, Datex.Date.add(socket.assigns.date_end, 92))
+     |> assign(:groundwater, trunc(:rand.uniform() * 100))
+     |> assign(:rainfall, trunc(:rand.uniform() * 100))
+     |> assign(:reservoirs, trunc(:rand.uniform() * 10_000_000))}
+  end
+
   def render(assigns) do
     ~H"""
     <div>
       <div class="bg-gray-50 py-6 sm:py-6 rounded-lg">
         <div class="mx-auto max-w-2xl px-6 lg:max-w-7xl lg:px-8">
-          <p class="mx-auto max-w-lg text-pretty text-center font-medium tracking-tight text-gray-400 text-3xl">
-            <%= Datex.Date.format_date(@date_start, "DD/MM/YYYY") %> to <%= Datex.Date.format_date(
-              @date_end,
-              "DD/MM/YYYY"
-            ) %>
-          </p>
-          <p class="mx-auto max-w-lg text-pretty text-center  font-medium tracking-tight text-gray-950 text-3xl">
+          <div class="flex justify-evenly h-8">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" phx-click="backward">
+              <path d="M9.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.2 288 416 288c17.7 0 32-14.3 32-32s-14.3-32-32-32l-306.7 0L214.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z" />
+            </svg>
+            <p class="mx-auto max-w-lg text-pretty text-center font-medium tracking-tight text-gray-400 text-3xl">
+              <%= Datex.Date.format_date(@date_start, "DD/MM/YYYY") %> to <%= Datex.Date.format_date(
+                @date_end,
+                "DD/MM/YYYY"
+              ) %>
+            </p>
+
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" phx-click="forward">
+              <path d="M438.6 278.6c12.5-12.5 12.5-32.8 0-45.3l-160-160c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L338.8 224 32 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l306.7 0L233.4 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l160-160z" />
+            </svg>
+          </div>
+          <p class="mx-auto max-w-lg text-pretty text-center font-medium tracking-tight text-gray-950 text-3xl lg:mt-4 mt-10">
             in <%= Enum.random(@regions).region %>
           </p>
           <p class="mx-auto max-w-lg text-pretty text-center text-4xl font-medium tracking-tight text-gray-950 sm:text-3xl ">
