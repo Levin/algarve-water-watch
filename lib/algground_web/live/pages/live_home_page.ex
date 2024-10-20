@@ -26,73 +26,22 @@ defmodule AlggroundWeb.LiveHomePage do
           region: region.region,
           groundwater: trunc(:rand.uniform() * 100),
           rainfall: trunc(:rand.uniform() * 100),
-          reservoir: trunc(:rand.uniform() * 10_000_000),
+          reservoir: trunc(:rand.uniform() * 1_000),
           image: region.image
         }
       end)
-
-    generated_groundwaterlevels =
-      1..40
-      |> Enum.to_list()
-      |> Enum.map(fn _ -> trunc(:rand.uniform() * 100) end)
-
-    generated_rainfalllevels =
-      1..40
-      |> Enum.to_list()
-      |> Enum.map(fn _ -> trunc(:rand.uniform() * 100) end)
-
-    generated_reservoirlevels =
-      1..40
-      |> Enum.to_list()
-      |> Enum.map(fn _ -> trunc(:rand.uniform() * 10_000_000) end)
 
     {:ok,
      socket
-     |> assign(:groundwater_levels, generated_groundwaterlevels)
-     |> assign(:rainfall_levels, generated_rainfalllevels)
-     |> assign(:reservoir_levels, generated_reservoirlevels)
+     |> assign(:groundwater_levels, Enum.map(regions, & &1.groundwater))
+     |> assign(:rainfall_levels, Enum.map(regions, & &1.rainfall))
+     |> assign(:reservoir_levels, Enum.map(regions, & &1.reservoir))
      |> assign(:date_start, Datex.Date.today())
      |> assign(:date_end, Datex.Date.add(Datex.Date.today(), 92))
      |> assign(:regions, regions)
-     |> assign(:groundwater, trunc(:rand.uniform() * 100))
-     |> assign(:rainfall, trunc(:rand.uniform() * 100))
-     |> assign(:reservoirs, trunc(:rand.uniform() * 10_000_000))
      |> assign(:display_groundwater, true)
      |> assign(:display_rainfall, false)
      |> assign(:display_reservoir, false)}
-  end
-
-  def handle_info("new_values", socket) do
-    groundwater = trunc(:rand.uniform() * 100)
-    rainfall = trunc(:rand.uniform() * 100)
-    reservoir = trunc(:rand.uniform() * 10_000_000)
-
-    regions =
-      Enum.map(@region_names, fn region ->
-        %{
-          region: region.region,
-          groundwater: groundwater,
-          rainfall: rainfall,
-          reservoir: reservoir,
-          image: region.image
-        }
-      end)
-
-    new_groundwaters = maybe_add_value(socket.assigns.groundwater_levels ++ [groundwater])
-    new_rainfalls = maybe_add_value(socket.assigns.rainfall_levels ++ [rainfall])
-    new_reservoirs = maybe_add_value(socket.assigns.reservoir_levels ++ [reservoir])
-
-    {:noreply,
-     socket
-     |> assign(:groundwater_levels, new_groundwaters)
-     |> assign(:rainfall_levels, new_rainfalls)
-     |> assign(:reservoir_levels, new_reservoirs)
-     |> assign(:regions, regions)
-     |> assign(:date_start, Datex.Date.add(socket.assigns.date_start, 92))
-     |> assign(:date_end, Datex.Date.add(socket.assigns.date_end, 92))
-     |> assign(:groundwater, trunc(:rand.uniform() * 100))
-     |> assign(:rainfall, trunc(:rand.uniform() * 100))
-     |> assign(:reservoirs, trunc(:rand.uniform() * 10_000_000))}
   end
 
   def handle_event("display_groundwater", _params, socket) do
@@ -119,7 +68,7 @@ defmodule AlggroundWeb.LiveHomePage do
   def handle_event("backward", _params, socket) do
     groundwater = trunc(:rand.uniform() * 100)
     rainfall = trunc(:rand.uniform() * 100)
-    reservoir = trunc(:rand.uniform() * 10_000_000)
+    reservoir = trunc(:rand.uniform() * 1_000)
 
     regions =
       Enum.map(@region_names, fn region ->
@@ -132,9 +81,9 @@ defmodule AlggroundWeb.LiveHomePage do
         }
       end)
 
-    new_groundwaters = maybe_add_value(socket.assigns.groundwater_levels ++ [groundwater])
-    new_rainfalls = maybe_add_value(socket.assigns.rainfall_levels ++ [rainfall])
-    new_reservoirs = maybe_add_value(socket.assigns.reservoir_levels ++ [reservoir])
+    new_groundwaters = maybe_remove_value([groundwater] ++ socket.assigns.groundwater_levels)
+    new_rainfalls = maybe_remove_value([rainfall] ++ socket.assigns.rainfall_levels)
+    new_reservoirs = maybe_remove_value([reservoir] ++ socket.assigns.reservoir_levels)
 
     {:noreply,
      socket
@@ -143,16 +92,13 @@ defmodule AlggroundWeb.LiveHomePage do
      |> assign(:reservoir_levels, new_reservoirs)
      |> assign(:regions, regions)
      |> assign(:date_start, Datex.Date.add(socket.assigns.date_start, 92))
-     |> assign(:date_end, Datex.Date.add(socket.assigns.date_end, 92))
-     |> assign(:groundwater, trunc(:rand.uniform() * 100))
-     |> assign(:rainfall, trunc(:rand.uniform() * 100))
-     |> assign(:reservoirs, trunc(:rand.uniform() * 10_000_000))}
+     |> assign(:date_end, Datex.Date.add(socket.assigns.date_end, 92))}
   end
 
   def handle_event("forward", _params, socket) do
     groundwater = trunc(:rand.uniform() * 100)
     rainfall = trunc(:rand.uniform() * 100)
-    reservoir = trunc(:rand.uniform() * 10_000_000)
+    reservoir = trunc(:rand.uniform() * 1_000)
 
     regions =
       Enum.map(@region_names, fn region ->
@@ -176,10 +122,7 @@ defmodule AlggroundWeb.LiveHomePage do
      |> assign(:reservoir_levels, new_reservoirs)
      |> assign(:regions, regions)
      |> assign(:date_start, Datex.Date.add(socket.assigns.date_start, 92))
-     |> assign(:date_end, Datex.Date.add(socket.assigns.date_end, 92))
-     |> assign(:groundwater, trunc(:rand.uniform() * 100))
-     |> assign(:rainfall, trunc(:rand.uniform() * 100))
-     |> assign(:reservoirs, trunc(:rand.uniform() * 10_000_000))}
+     |> assign(:date_end, Datex.Date.add(socket.assigns.date_end, 92))}
   end
 
   def render(assigns) do
@@ -203,10 +146,10 @@ defmodule AlggroundWeb.LiveHomePage do
             </svg>
           </div>
           <p class="mx-auto max-w-lg text-pretty text-center font-medium tracking-tight text-gray-950 text-3xl lg:mt-4 mt-10">
-            in <%= Enum.random(@regions).region %>
+            in <%= get_region(@regions, "Albufeira").region %>
           </p>
           <p class="mx-auto max-w-lg text-pretty text-center text-4xl font-medium tracking-tight text-gray-950 sm:text-3xl ">
-            <%= display_groundwater(assigns) %>
+            <%= display_groundwater(get_region(@regions, "Albufeira")) %>
           </p>
           <p class="mx-auto max-w-lg text-pretty text-center font-sm tracking-tight text-gray-400 text-sm cursor-pointer">
             Ground Water Level
@@ -219,16 +162,16 @@ defmodule AlggroundWeb.LiveHomePage do
                     <p class="mt-2 text-md font-medium tracking-tight text-gray-950 max-lg:text-center cursor-pointer">
                       Rainfall
                     </p>
-                    <p class="mt-2 max-w-lg text-lg/6 text-gray-600 max-lg:text-center text-indigo-800">
-                      <%= display_rainfall(assigns) %>
+                    <p class="mt-2 max-w-lg text-lg/6 text-gray-600 max-lg:text-center">
+                      <%= display_rainfall(get_region(@regions, "Albufeira")) %>
                     </p>
                   </div>
                   <div class="px-8 pt-8 sm:px-10 sm:pt-10">
                     <p class="mt-2 text-md font-medium tracking-tight text-gray-950 max-lg:text-center cursor-pointer">
                       Reservoirs
                     </p>
-                    <p class="mt-2 max-w-lg text-lg/6 text-gray-600 max-lg:text-center text-indigo-800">
-                      <%= display_reservoirs(assigns) %>
+                    <p class="mt-2 max-w-lg text-lg/6 text-gray-600 max-lg:text-center">
+                      <%= display_reservoirs(get_region(@regions, "Albufeira")) %>
                     </p>
                   </div>
                 </div>
@@ -324,21 +267,21 @@ defmodule AlggroundWeb.LiveHomePage do
       assigns.groundwater >= 150 ->
         ~H"""
         <p class="mt-2 mx-auto flex justify-center text-lg/6 text-green-600 ">
-          <%= @groundwater %>m
+          <%= @groundwater %> m
         </p>
         """
 
       assigns.groundwater < 150 and assigns.groundwater >= 50 ->
         ~H"""
-        <p class="mt-2 mx-auto flex justify-center text-lg/6 text-green-600 ">
-          <%= @groundwater %>m
+        <p class="mt-2 mx-auto flex justify-center text-lg/6 text-amber-600 ">
+          <%= @groundwater %> m
         </p>
         """
 
       assigns.groundwater < 50 ->
         ~H"""
-        <p class="mt-2 mx-auto flex justify-center text-lg/6 text-green-600 ">
-          <%= @groundwater %>m
+        <p class="mt-2 mx-auto flex justify-center text-lg/6 text-red-600 ">
+          <%= @groundwater %> m
         </p>
         """
     end
@@ -349,21 +292,21 @@ defmodule AlggroundWeb.LiveHomePage do
       assigns.rainfall >= 80 ->
         ~H"""
         <p class="mt-2 max-w-lg text-lg/6 text-green-600 max-lg:text-center">
-          <%= @rainfall %>ml
+          <%= @rainfall %> ml
         </p>
         """
 
       assigns.rainfall < 80 and assigns.rainfall >= 30 ->
         ~H"""
         <p class="mt-2 max-w-lg text-lg/6 text-amber-500 max-lg:text-center">
-          <%= @rainfall %>ml
+          <%= @rainfall %> ml
         </p>
         """
 
       assigns.rainfall < 30 ->
         ~H"""
         <p class="mt-2 max-w-lg text-lg/6 text-red-600 max-lg:text-center">
-          <%= @rainfall %>ml
+          <%= @rainfall %> ml
         </p>
         """
     end
@@ -371,32 +314,42 @@ defmodule AlggroundWeb.LiveHomePage do
 
   defp display_reservoirs(assigns) do
     cond do
-      assigns.reservoirs >= 6_000_000 ->
+      assigns.reservoir >= 6_000_000 ->
         ~H"""
         <p class="mt-2 max-w-lg text-lg/6 text-green-600 max-lg:text-center">
-          <%= @reservoirs %>10⁶m³
+          <%= @reservoir %> 10⁶km³
         </p>
         """
 
-      assigns.reservoirs < 6_000_000 and assigns.reservoirs >= 1_200_000 ->
+      assigns.reservoir < 6_000_000 and assigns.reservoir >= 1_200_000 ->
         ~H"""
         <p class="mt-2 max-w-lg text-lg/6 text-amber-500 max-lg:text-center">
-          <%= @reservoirs %> 10⁶m³
+          <%= @reservoir %> 10⁶km³
         </p>
         """
 
-      assigns.reservoirs < 1_200_000 ->
+      assigns.reservoir < 1_200_000 ->
         ~H"""
         <p class="mt-2 max-w-lg text-lg/6 text-red-600 max-lg:text-center">
-          <%= @reservoirs %>10⁶m³
+          <%= @reservoir %> 10⁶km³
         </p>
         """
     end
   end
 
-  defp maybe_add_value(measurements) when length(measurements) > 40 do
-    Enum.drop(measurements, 1)
-  end
+  defp maybe_add_value(measurements) when length(measurements) > 15,
+    do: Enum.drop(measurements, 1)
 
   defp maybe_add_value(measurements), do: measurements
+
+  defp maybe_remove_value(measurements) when length(measurements) > 15 do
+    measurements
+    |> Enum.reverse()
+    |> Enum.drop(1)
+    |> Enum.reverse()
+  end
+
+  defp maybe_remove_value(measurements), do: measurements
+
+  defp get_region(regions, region), do: List.first(Enum.filter(regions, &(&1.region == region)))
 end
