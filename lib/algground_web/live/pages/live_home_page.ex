@@ -33,21 +33,28 @@ defmodule AlggroundWeb.LiveHomePage do
 
     Process.send_after(self(), "new_values", 5_000)
 
+    generated_groundwaterlevels =
+      1..40
+      |> Enum.to_list()
+      |> Enum.map(fn _ -> trunc(:rand.uniform() * 100) end)
+
+    generated_rainfalllevels =
+      1..40
+      |> Enum.to_list()
+      |> Enum.map(fn _ -> trunc(:rand.uniform() * 100) end)
+
+    generated_reservoirlevels =
+      1..40
+      |> Enum.to_list()
+      |> Enum.map(fn _ -> trunc(:rand.uniform() * 10_000_000) end)
+
     {:ok,
      socket
-     |> assign(:groundwater_levels, [
-       trunc(:rand.uniform() * 10),
-       trunc(:rand.uniform() * 100)
-     ])
-     |> assign(:rainfall_levels, [
-       trunc(:rand.uniform() * 10),
-       trunc(:rand.uniform() * 100)
-     ])
-     |> assign(:reservoir_levels, [
-       trunc(:rand.uniform() * 10_000_000),
-       trunc(:rand.uniform() * 10_000_000)
-     ])
-     |> assign(:date, Datex.Date.today())
+     |> assign(:groundwater_levels, generated_groundwaterlevels)
+     |> assign(:rainfall_levels, generated_rainfalllevels)
+     |> assign(:reservoir_levels, generated_reservoirlevels)
+     |> assign(:date_start, Datex.Date.today())
+     |> assign(:date_end, Datex.Date.add(Datex.Date.today(), 92))
      |> assign(:regions, regions)
      |> assign(:groundwater, trunc(:rand.uniform() * 100))
      |> assign(:rainfall, trunc(:rand.uniform() * 100))
@@ -85,7 +92,8 @@ defmodule AlggroundWeb.LiveHomePage do
      |> assign(:rainfall_levels, new_rainfalls)
      |> assign(:reservoir_levels, new_reservoirs)
      |> assign(:regions, regions)
-     |> assign(:date, Datex.Date.add(socket.assigns.date, 31))
+     |> assign(:date_start, Datex.Date.add(socket.assigns.date_start, 92))
+     |> assign(:date_end, Datex.Date.add(socket.assigns.date_end, 92))
      |> assign(:groundwater, trunc(:rand.uniform() * 100))
      |> assign(:rainfall, trunc(:rand.uniform() * 100))
      |> assign(:reservoirs, trunc(:rand.uniform() * 10_000_000))}
@@ -118,15 +126,18 @@ defmodule AlggroundWeb.LiveHomePage do
       <div class="bg-gray-50 py-6 sm:py-6 rounded-lg">
         <div class="mx-auto max-w-2xl px-6 lg:max-w-7xl lg:px-8">
           <p class="mx-auto max-w-lg text-pretty text-center font-medium tracking-tight text-gray-400 text-3xl">
-            <%= Datex.Date.format_date(@date, "DD/MM/YYYY") %>
+            <%= Datex.Date.format_date(@date_start, "DD/MM/YYYY") %> to <%= Datex.Date.format_date(
+              @date_end,
+              "DD/MM/YYYY"
+            ) %>
           </p>
           <p class="mx-auto max-w-lg text-pretty text-center  font-medium tracking-tight text-gray-950 text-3xl">
-            <%= Enum.random(@regions).region %>
+            in <%= Enum.random(@regions).region %>
           </p>
           <p class="mx-auto max-w-lg text-pretty text-center text-4xl font-medium tracking-tight text-gray-950 sm:text-3xl ">
             <%= display_groundwater(assigns) %>
           </p>
-          <p class="mx-auto max-w-lg text-pretty text-center font-sm tracking-tight text-gray-400 text-sm">
+          <p class="mx-auto max-w-lg text-pretty text-center font-sm tracking-tight text-gray-400 text-sm cursor-pointer">
             Ground Water Level
           </p>
           <div class="mt-10 grid gap-4 sm:mt-4 lg:rounded-t-[2rem]">
@@ -134,7 +145,7 @@ defmodule AlggroundWeb.LiveHomePage do
               <div class="relative flex h-full flex-col overflow-hidden rounded-[calc(2rem+1px)]">
                 <div class="flex justify-evenly mb-8">
                   <div class="px-8 pt-8 sm:px-10 sm:pt-10">
-                    <p class="mt-2 text-md font-medium tracking-tight text-gray-950 max-lg:text-center">
+                    <p class="mt-2 text-md font-medium tracking-tight text-gray-950 max-lg:text-center cursor-pointer">
                       Rainfall
                     </p>
                     <p class="mt-2 max-w-lg text-lg/6 text-gray-600 max-lg:text-center text-indigo-800">
@@ -142,7 +153,7 @@ defmodule AlggroundWeb.LiveHomePage do
                     </p>
                   </div>
                   <div class="px-8 pt-8 sm:px-10 sm:pt-10">
-                    <p class="mt-2 text-md font-medium tracking-tight text-gray-950 max-lg:text-center">
+                    <p class="mt-2 text-md font-medium tracking-tight text-gray-950 max-lg:text-center cursor-pointer">
                       Reservoirs
                     </p>
                     <p class="mt-2 max-w-lg text-lg/6 text-gray-600 max-lg:text-center text-indigo-800">
@@ -157,51 +168,47 @@ defmodule AlggroundWeb.LiveHomePage do
           </div>
 
           <%= if @display_groundwater do %>
-            <div class="rounded-sm bg-white lg:rounded-t-[2rem] px-8 pt-4 contain">
-              <%= draw_groundwater(assigns) %>
+            <div class="rounded-sm bg-white lg:rounded-t-[2rem] px-8 pt-4 contain block md:hidden">
+              <%= draw_groundwater(assigns, 280) %>
             </div>
-            <div class="flex justify-between px-8">
+            <div class="rounded-sm bg-white lg:rounded-t-[2rem] px-8 pt-4 contain md:block hidden">
+              <%= draw_groundwater(assigns, 580) %>
+            </div>
+            <div class="flex justify-between px-4">
               <p class="text-md font-medium tracking-tight text-gray-400 max-lg:text-center">
                 Ground Water Level
               </p>
-              <p phx-click="display_rainfall" class="cursor-pointer">see Rainfall</p>
-              <p class="text-md font-medium tracking-tight text-gray-400 max-lg:text-center">
-                last 2 Quarters
-              </p>
+              <p phx-click="display_rainfall" class="cursor-pointer">Rainfall</p>
             </div>
           <% end %>
           <%= if @display_rainfall do %>
-            <div class="rounded-sm bg-white lg:rounded-t-[2rem] px-8 pt-4 contain">
-              <%= draw_rainfall(assigns) %>
+            <div class="rounded-sm bg-white lg:rounded-t-[2rem] px-8 pt-4 contain block md:hidden">
+              <%= draw_rainfall(assigns, 280) %>
             </div>
-            <div class="flex justify-between px-8">
+            <div class="rounded-sm bg-white lg:rounded-t-[2rem] px-8 pt-4 contain md:block hidden">
+              <%= draw_rainfall(assigns, 580) %>
+            </div>
+            <div class="flex justify-between px-4">
               <p class="text-md font-medium tracking-tight text-gray-400 max-lg:text-center">
-                Ground Water Level
+                Rainfall
               </p>
-              <p phx-click="display_reservoir" class="cursor-pointer">see Reservoir Water Levels</p>
-              <p class="text-md font-medium tracking-tight text-gray-400 max-lg:text-center cursor_pointer">
-                last 2 Quarters
-              </p>
+              <p phx-click="display_reservoir" class="cursor-pointer">Reservoir</p>
             </div>
           <% end %>
           <%= if @display_reservoir do %>
-            <div class="rounded-sm bg-white lg:rounded-t-[2rem] px-8 pt-4">
-              <%= draw_reservoir(assigns) %>
+            <div class="rounded-sm bg-white lg:rounded-t-[2rem] px-8 pt-4 block md:hidden">
+              <%= draw_reservoir(assigns, 280) %>
             </div>
-            <div class="flex justify-between px-8">
+            <div class="rounded-sm bg-white lg:rounded-t-[2rem] px-8 pt-4 md:block hidden">
+              <%= draw_reservoir(assigns, 580) %>
+            </div>
+            <div class="flex justify-between px-4">
               <p class="text-md font-medium tracking-tight text-gray-400 max-lg:text-center">
                 Reservoir Water Level
               </p>
-              <p phx-click="display_groundwater" class="cursor-pointer">see Ground Water Level</p>
-              <p class="text-md font-medium tracking-tight text-gray-400 max-lg:text-center">
-                last 2 Quarters
-              </p>
+              <p phx-click="display_groundwater" class="cursor-pointer">Ground Water</p>
             </div>
           <% end %>
-
-          <div>
-            <.input name="address" type="text" value="" placeholder="see water levels next to me" />
-          </div>
 
           <div class="mb-4"></div>
           <div class="relative">
@@ -226,19 +233,19 @@ defmodule AlggroundWeb.LiveHomePage do
     """
   end
 
-  defp draw_groundwater(assigns) do
+  defp draw_groundwater(assigns, width) do
     graph = Contex.Sparkline.new(assigns.groundwater_levels)
-    Contex.Sparkline.draw(%{graph | height: 100, width: 300})
+    Contex.Sparkline.draw(%{graph | height: 100, width: width})
   end
 
-  defp draw_rainfall(assigns) do
+  defp draw_rainfall(assigns, width) do
     graph = Contex.Sparkline.new(assigns.rainfall_levels)
-    Contex.Sparkline.draw(%{graph | height: 100, width: 300})
+    Contex.Sparkline.draw(%{graph | height: 100, width: width})
   end
 
-  defp draw_reservoir(assigns) do
+  defp draw_reservoir(assigns, width) do
     graph = Contex.Sparkline.new(assigns.reservoir_levels)
-    Contex.Sparkline.draw(%{graph | height: 100, width: 300})
+    Contex.Sparkline.draw(%{graph | height: 100, width: width})
   end
 
   defp display_groundwater(assigns) do
@@ -316,7 +323,7 @@ defmodule AlggroundWeb.LiveHomePage do
     end
   end
 
-  defp maybe_add_value(measurements) when length(measurements) > 25 do
+  defp maybe_add_value(measurements) when length(measurements) > 40 do
     Enum.drop(measurements, 1)
   end
 
