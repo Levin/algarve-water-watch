@@ -228,17 +228,17 @@ defmodule AlggroundWeb.LiveHomePage do
 
   defp draw_groundwater(assigns) do
     graph = Contex.Sparkline.new(assigns.groundwater_levels)
-    Contex.Sparkline.draw(%{graph | height: 100, width: 600})
+    Contex.Sparkline.draw(%{graph | height: 100, width: 300})
   end
 
   defp draw_rainfall(assigns) do
     graph = Contex.Sparkline.new(assigns.rainfall_levels)
-    Contex.Sparkline.draw(%{graph | height: 100, width: 600})
+    Contex.Sparkline.draw(%{graph | height: 100, width: 300})
   end
 
   defp draw_reservoir(assigns) do
     graph = Contex.Sparkline.new(assigns.reservoir_levels)
-    Contex.Sparkline.draw(%{graph | height: 100, width: 600})
+    Contex.Sparkline.draw(%{graph | height: 100, width: 300})
   end
 
   defp display_groundwater(assigns) do
