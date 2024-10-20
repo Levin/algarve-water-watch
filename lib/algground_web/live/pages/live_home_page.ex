@@ -148,7 +148,7 @@ defmodule AlggroundWeb.LiveHomePage do
           <p class="mx-auto max-w-lg text-pretty text-center font-medium tracking-tight text-gray-950 text-3xl lg:mt-4 mt-10">
             in <%= get_region(@regions, "Albufeira").region %>
           </p>
-          <p class="mx-auto max-w-lg text-pretty text-center text-4xl font-medium tracking-tight text-gray-950 sm:text-3xl ">
+          <p class="mx-auto max-w-lg text-pretty text-center text-4xl font-medium tracking-tight sm:text-3xl ">
             <%= display_groundwater(get_region(@regions, "Albufeira")) %>
           </p>
           <p class="mx-auto max-w-lg text-pretty text-center font-sm tracking-tight text-gray-400 text-sm cursor-pointer">
