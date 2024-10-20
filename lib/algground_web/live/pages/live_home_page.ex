@@ -31,38 +31,85 @@ defmodule AlggroundWeb.LiveHomePage do
         }
       end)
 
-    Process.send_after(self(), "new_values", 30_000)
+    Process.send_after(self(), "new_values", 3_000)
 
     {:ok,
      socket
+     |> assign(:groundwater_levels, [
+       trunc(:rand.uniform() * 10),
+       trunc(:rand.uniform() * 100)
+     ])
+     |> assign(:rainfall_levels, [
+       trunc(:rand.uniform() * 10),
+       trunc(:rand.uniform() * 100)
+     ])
+     |> assign(:reservoir_levels, [
+       trunc(:rand.uniform() * 10_000_000),
+       trunc(:rand.uniform() * 10_000_000)
+     ])
      |> assign(:date, Datex.Date.today())
      |> assign(:regions, regions)
      |> assign(:groundwater, trunc(:rand.uniform() * 100))
      |> assign(:rainfall, trunc(:rand.uniform() * 100))
-     |> assign(:reservoirs, trunc(:rand.uniform() * 10_000_000))}
+     |> assign(:reservoirs, trunc(:rand.uniform() * 10_000_000))
+     |> assign(:display_groundwater, true)
+     |> assign(:display_rainfall, false)
+     |> assign(:display_reservoir, false)}
   end
 
   def handle_info("new_values", socket) do
-    Process.send_after(self(), "new_values", 30_000)
+    Process.send_after(self(), "new_values", 1_000)
+
+    groundwater = trunc(:rand.uniform() * 100)
+    rainfall = trunc(:rand.uniform() * 100)
+    reservoir = trunc(:rand.uniform() * 10_000_000)
 
     regions =
       Enum.map(@region_names, fn region ->
         %{
           region: region.region,
-          groundwater: trunc(:rand.uniform() * 100),
-          rainfall: trunc(:rand.uniform() * 100),
-          reservoir: trunc(:rand.uniform() * 10_000_000),
+          groundwater: groundwater,
+          rainfall: rainfall,
+          reservoir: reservoir,
           image: region.image
         }
       end)
 
+    new_groundwaters = maybe_add_value(socket.assigns.groundwater_levels ++ [groundwater])
+    new_rainfalls = maybe_add_value(socket.assigns.rainfall_levels ++ [rainfall])
+    new_reservoirs = maybe_add_value(socket.assigns.reservoir_levels ++ [reservoir])
+
     {:noreply,
      socket
+     |> assign(:groundwater_levels, new_groundwaters)
+     |> assign(:rainfall_levels, new_rainfalls)
+     |> assign(:reservoir_levels, new_reservoirs)
      |> assign(:regions, regions)
      |> assign(:date, Datex.Date.add(socket.assigns.date, 31))
      |> assign(:groundwater, trunc(:rand.uniform() * 100))
      |> assign(:rainfall, trunc(:rand.uniform() * 100))
      |> assign(:reservoirs, trunc(:rand.uniform() * 10_000_000))}
+  end
+
+  def handle_event("display_groundwater", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:display_groundwater, true)
+     |> assign(:display_reservoir, false)}
+  end
+
+  def handle_event("display_rainfall", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:display_groundwater, false)
+     |> assign(:display_rainfall, true)}
+  end
+
+  def handle_event("display_reservoir", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:display_rainfall, false)
+     |> assign(:display_reservoir, true)}
   end
 
   def render(assigns) do
@@ -82,7 +129,7 @@ defmodule AlggroundWeb.LiveHomePage do
           <p class="mx-auto max-w-lg text-pretty text-center font-sm tracking-tight text-gray-400 text-sm">
             Ground Water Level
           </p>
-          <div class="mt-10 grid gap-4 sm:mt-4 ">
+          <div class="mt-10 grid gap-4 sm:mt-4 lg:rounded-t-[2rem]">
             <div class="relative mb-4">
               <div class="relative flex h-full flex-col overflow-hidden rounded-[calc(2rem+1px)]">
                 <div class="flex justify-evenly mb-8">
@@ -108,6 +155,54 @@ defmodule AlggroundWeb.LiveHomePage do
               </div>
             </div>
           </div>
+
+          <%= if @display_groundwater do %>
+            <div class="rounded-sm bg-white lg:rounded-t-[2rem] px-8 pt-4 contain">
+              <%= draw_groundwater(assigns) %>
+            </div>
+            <div class="flex justify-between px-8">
+              <p class="text-md font-medium tracking-tight text-gray-400 max-lg:text-center">
+                Ground Water Level
+              </p>
+              <p phx-click="display_rainfall" class="cursor-pointer">see Rainfall</p>
+              <p class="text-md font-medium tracking-tight text-gray-400 max-lg:text-center">
+                last 2 Quarters
+              </p>
+            </div>
+          <% end %>
+          <%= if @display_rainfall do %>
+            <div class="rounded-sm bg-white lg:rounded-t-[2rem] px-8 pt-4 contain">
+              <%= draw_rainfall(assigns) %>
+            </div>
+            <div class="flex justify-between px-8">
+              <p class="text-md font-medium tracking-tight text-gray-400 max-lg:text-center">
+                Ground Water Level
+              </p>
+              <p phx-click="display_reservoir" class="cursor-pointer">see Reservoir Water Levels</p>
+              <p class="text-md font-medium tracking-tight text-gray-400 max-lg:text-center cursor_pointer">
+                last 2 Quarters
+              </p>
+            </div>
+          <% end %>
+          <%= if @display_reservoir do %>
+            <div class="rounded-sm bg-white lg:rounded-t-[2rem] px-8 pt-4">
+              <%= draw_reservoir(assigns) %>
+            </div>
+            <div class="flex justify-between px-8">
+              <p class="text-md font-medium tracking-tight text-gray-400 max-lg:text-center">
+                Reservoir Water Level
+              </p>
+              <p phx-click="display_groundwater" class="cursor-pointer">see Ground Water Level</p>
+              <p class="text-md font-medium tracking-tight text-gray-400 max-lg:text-center">
+                last 2 Quarters
+              </p>
+            </div>
+          <% end %>
+
+          <div>
+            <.input name="address" type="text" value="" placeholder="see water levels next to me" />
+          </div>
+
           <div class="mb-4"></div>
           <div class="relative">
             <div class="absolute inset-px rounded-lg bg-white lg:rounded-l-[2rem]"></div>
@@ -129,6 +224,21 @@ defmodule AlggroundWeb.LiveHomePage do
       </div>
     </div>
     """
+  end
+
+  defp draw_groundwater(assigns) do
+    graph = Contex.Sparkline.new(assigns.groundwater_levels)
+    Contex.Sparkline.draw(%{graph | height: 100, width: 600})
+  end
+
+  defp draw_rainfall(assigns) do
+    graph = Contex.Sparkline.new(assigns.rainfall_levels)
+    Contex.Sparkline.draw(%{graph | height: 100, width: 600})
+  end
+
+  defp draw_reservoir(assigns) do
+    graph = Contex.Sparkline.new(assigns.reservoir_levels)
+    Contex.Sparkline.draw(%{graph | height: 100, width: 600})
   end
 
   defp display_groundwater(assigns) do
@@ -205,4 +315,10 @@ defmodule AlggroundWeb.LiveHomePage do
         """
     end
   end
+
+  defp maybe_add_value(measurements) when length(measurements) > 25 do
+    Enum.drop(measurements, 1)
+  end
+
+  defp maybe_add_value(measurements), do: measurements
 end

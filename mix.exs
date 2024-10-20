@@ -59,7 +59,8 @@ defmodule Algground.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.5"},
-      {:datex, "~> 1.0"}
+      {:datex, "~> 1.0"},
+      {:contex, "~> 0.5.0"}
     ]
   end
 
