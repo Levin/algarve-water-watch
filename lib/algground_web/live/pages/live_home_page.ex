@@ -31,7 +31,7 @@ defmodule AlggroundWeb.LiveHomePage do
         }
       end)
 
-    Process.send_after(self(), "new_values", 3_000)
+    Process.send_after(self(), "new_values", 5_000)
 
     {:ok,
      socket
@@ -58,7 +58,7 @@ defmodule AlggroundWeb.LiveHomePage do
   end
 
   def handle_info("new_values", socket) do
-    Process.send_after(self(), "new_values", 1_000)
+    Process.send_after(self(), "new_values", 5_000)
 
     groundwater = trunc(:rand.uniform() * 100)
     rainfall = trunc(:rand.uniform() * 100)
