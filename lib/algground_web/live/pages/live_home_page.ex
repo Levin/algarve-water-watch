@@ -91,8 +91,8 @@ defmodule AlggroundWeb.LiveHomePage do
      |> assign(:rainfall_levels, new_rainfalls)
      |> assign(:reservoir_levels, new_reservoirs)
      |> assign(:regions, regions)
-     |> assign(:date_start, Datex.Date.add(socket.assigns.date_start, 92))
-     |> assign(:date_end, Datex.Date.add(socket.assigns.date_end, 92))}
+     |> assign(:date_start, Datex.Date.add(socket.assigns.date_start, -92))
+     |> assign(:date_end, Datex.Date.add(socket.assigns.date_end, -92))}
   end
 
   def handle_event("forward", _params, socket) do
