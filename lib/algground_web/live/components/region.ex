@@ -16,7 +16,6 @@ defmodule AlggroundWeb.Components.Region do
     ~H"""
     <div
       phx-target={@myself}
-      600
       phx-click={JS.toggle(to: "#information_#{@region.region}")}
       class="py-4 cursor-pointer text-center text-base font-semibold text-indigo-800 mb-2 bg-gray-50 rounded-lg"
     >
