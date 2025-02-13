@@ -306,29 +306,23 @@ defmodule AlggroundWeb.LiveHomePage do
 
   defp display_groundwater(assigns) do
     case assigns.active_municipality do
-      %{groundwater_levels: nil} -> 
-        ~H"""
-        <p class="mt-2 mx-auto flex justify-center text-lg/6 text-gray-600">
-          No data available
-        </p>
-        """
-      %{groundwater_levels: levels, percentiles: %{p30: p30, p70: p70}} when is_number(levels) -> 
+      %{groundwater_levels: levels} when not is_nil(levels) -> 
         assigns = 
-          assign(assigns, :color_class, 
-            cond do
-              levels >= p70 -> "text-green-600"
-              levels >= p30 -> "text-amber-600"
-              true -> "text-red-600"
-            end)
-          |> assign(:formatted_level, 
-            levels
-            |> Kernel./(1)
-            |> Float.round(2)
-            |> Float.to_string())
+          assigns
+          |> assign(:color_class, case levels do
+            0.0 -> "text-gray-600"
+            level when level > assigns.active_municipality.percentiles.p70 -> "text-green-600"
+            level when level < assigns.active_municipality.percentiles.p30 -> "text-red-600"
+            _ -> "text-orange-600"
+          end)
+          |> assign(:formatted_level, case levels do
+            0.0 -> "Insufficient data"
+            level -> "#{Float.round(level, 2)} meters below ground"
+          end)
         
         ~H"""
         <p class={"mt-2 mx-auto flex justify-center text-lg/6 #{@color_class}"}>
-          <%= @formatted_level %> meters below ground
+          <%= @formatted_level %>
         </p>
         """
       _ -> 
