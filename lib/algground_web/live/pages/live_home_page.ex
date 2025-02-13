@@ -44,27 +44,6 @@ defmodule AlggroundWeb.LiveHomePage do
      |> assign(:display_reservoir, false)}
   end
 
-  def handle_event("display_groundwater", _params, socket) do
-    {:noreply,
-     socket
-     |> assign(:display_groundwater, true)
-     |> assign(:display_reservoir, false)}
-  end
-
-  def handle_event("display_rainfall", _params, socket) do
-    {:noreply,
-     socket
-     |> assign(:display_groundwater, false)
-     |> assign(:display_rainfall, true)}
-  end
-
-  def handle_event("display_reservoir", _params, socket) do
-    {:noreply,
-     socket
-     |> assign(:display_rainfall, false)
-     |> assign(:display_reservoir, true)}
-  end
-
   def handle_event("backward", _params, socket) do
     groundwater = trunc(:rand.uniform() * 100)
     rainfall = trunc(:rand.uniform() * 100)
@@ -227,16 +206,6 @@ defmodule AlggroundWeb.LiveHomePage do
     Contex.Sparkline.draw(%{graph | height: 100, width: width})
   end
 
-  defp draw_rainfall(assigns, width) do
-    graph = Contex.Sparkline.new(assigns.rainfall_levels)
-    Contex.Sparkline.draw(%{graph | height: 100, width: width})
-  end
-
-  defp draw_reservoir(assigns, width) do
-    graph = Contex.Sparkline.new(assigns.reservoir_levels)
-    Contex.Sparkline.draw(%{graph | height: 100, width: width})
-  end
-
   defp display_groundwater(assigns) do
     cond do
       assigns.groundwater >= 150 ->
@@ -257,56 +226,6 @@ defmodule AlggroundWeb.LiveHomePage do
         ~H"""
         <p class="mt-2 mx-auto flex justify-center text-lg/6 text-red-600 ">
           <%= @groundwater %> m
-        </p>
-        """
-    end
-  end
-
-  defp display_rainfall(assigns) do
-    cond do
-      assigns.rainfall >= 80 ->
-        ~H"""
-        <p class="mt-2 max-w-lg text-lg/6 text-green-600 max-lg:text-center">
-          <%= @rainfall %> ml
-        </p>
-        """
-
-      assigns.rainfall < 80 and assigns.rainfall >= 30 ->
-        ~H"""
-        <p class="mt-2 max-w-lg text-lg/6 text-amber-500 max-lg:text-center">
-          <%= @rainfall %> ml
-        </p>
-        """
-
-      assigns.rainfall < 30 ->
-        ~H"""
-        <p class="mt-2 max-w-lg text-lg/6 text-red-600 max-lg:text-center">
-          <%= @rainfall %> ml
-        </p>
-        """
-    end
-  end
-
-  defp display_reservoirs(assigns) do
-    cond do
-      assigns.reservoir >= 6_000_000 ->
-        ~H"""
-        <p class="mt-2 max-w-lg text-lg/6 text-green-600 max-lg:text-center">
-          <%= @reservoir %> 10⁶km³
-        </p>
-        """
-
-      assigns.reservoir < 6_000_000 and assigns.reservoir >= 1_200_000 ->
-        ~H"""
-        <p class="mt-2 max-w-lg text-lg/6 text-amber-500 max-lg:text-center">
-          <%= @reservoir %> 10⁶km³
-        </p>
-        """
-
-      assigns.reservoir < 1_200_000 ->
-        ~H"""
-        <p class="mt-2 max-w-lg text-lg/6 text-red-600 max-lg:text-center">
-          <%= @reservoir %> 10⁶km³
         </p>
         """
     end
