@@ -58,21 +58,26 @@ defmodule Algground.DataManager do
     municipalities = Map.get(state, :municipality_map, %{})
     water_levels = 
       case Map.get(municipalities, String.upcase(municipality)) do
-        %{
-          municipality: municipality,
-          capture_points: capture_points
-        } ->
-          capture_points
-          |> MapSet.to_list()
-          |> Enum.map(fn point_id ->
-            read_water_levels(point_id, start_date, end_date)
-          end)
-          |> Enum.reject(&is_nil/1)
-          |> case do
-            [] -> 0
-            measurements -> Enum.sum(measurements) / length(measurements)
+        nil -> 
+          0.0
+        capture_points -> 
+          # Get measurements from all capture points
+          all_measurements = 
+            capture_points
+            |> MapSet.to_list()
+            |> Enum.flat_map(fn point_id ->
+              read_water_levels(point_id, start_date, end_date)
+            end)
+
+          # Average all measurements for each date
+          case all_measurements do
+            [] -> 
+              0.0
+            measurements ->
+              measurements
+              |> Enum.map(fn {_date, level} -> level end)
+              |> then(fn levels -> Enum.sum(levels) / length(levels) end)
           end
-        %{} -> 0
       end
 
     {:reply, water_levels, state}
@@ -80,50 +85,30 @@ defmodule Algground.DataManager do
 
   def handle_call({:calculate_percentiles, municipality}, _from, state) do
     municipalities = Map.get(state, :municipality_map, %{})
-    capture_points = 
-      case Map.get(municipalities, String.upcase(municipality)) do
-        %{capture_points: capture_points} -> capture_points
-        %{} -> MapSet.new()
-      end
+    capture_points = Map.get(municipalities, String.upcase(municipality), MapSet.new())
 
-    all_levels = 
+    result = 
       capture_points
       |> MapSet.to_list()
       |> Enum.flat_map(fn point_id ->
-        csv_path = get_file_path(Path.join(@capture_points_folder, "#{point_id}.csv"))
-        
-        if File.exists?(csv_path) do
-          csv_path
-          |> File.stream!()
-          |> CSV.parse_stream()
-          |> Stream.drop(1)  # Skip header
-          |> Stream.map(fn [_date, level] -> 
-            case Float.parse(level) do
-              {value, _} -> value
-              :error -> nil
-            end
-          end)
-          |> Stream.filter(&(&1 != nil))  # Remove nil values
-          |> Enum.to_list()
-        else
-          []
-        end
+        get_all_water_levels(point_id)
       end)
-      |> Enum.sort()
+      |> case do
+        [] -> 
+          %{p30: 0.0, p70: 0.0}
+        levels -> 
+          sorted = Enum.sort(levels)
+          count = length(sorted)
+          p30_index = floor(count * 0.3)
+          p70_index = floor(count * 0.7)
+          
+          %{
+            p30: Enum.at(sorted, p30_index, 0.0),
+            p70: Enum.at(sorted, p70_index, 0.0)
+          }
+      end
 
-    case all_levels do
-      [] -> 
-        {:reply, %{p30: 0.0, p70: 0.0}, state}  # Default if no data
-      levels -> 
-        len = length(levels)
-        p30_index = floor(len * 0.3)
-        p70_index = floor(len * 0.7)
-        
-        {:reply, %{
-          p30: Enum.at(levels, p30_index),
-          p70: Enum.at(levels, p70_index)
-        }, state}
-    end
+    {:reply, result, state}
   end
 
   # Shared function to read and process water levels from a CSV file
