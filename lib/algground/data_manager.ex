@@ -135,9 +135,16 @@ defmodule Algground.DataManager do
         file_path
         |> File.stream!()
         |> CSV.parse_stream()
+        |> Stream.drop(1)  # Skip header row
         |> Stream.map(fn [date, level] ->
-          {Date.from_iso8601!(date), String.to_float(level)}
+          with {:ok, parsed_date} <- Date.from_iso8601(date),
+               {parsed_level, _} <- Float.parse(level) do
+            {parsed_date, parsed_level}
+          else
+            _ -> nil
+          end
         end)
+        |> Stream.reject(&is_nil/1)
         |> Stream.filter(fn {date, _level} ->
           Date.compare(date, start_date) != :lt && Date.compare(date, end_date) != :gt
         end)
@@ -155,7 +162,14 @@ defmodule Algground.DataManager do
       file_path
       |> File.stream!()
       |> CSV.parse_stream()
-      |> Stream.map(fn [_date, level] -> String.to_float(level) end)
+      |> Stream.drop(1)  # Skip header row
+      |> Stream.map(fn [_date, level] -> 
+        case Float.parse(level) do
+          {value, _} -> value
+          _ -> nil
+        end
+      end)
+      |> Stream.reject(&is_nil/1)
       |> Enum.to_list()
     else
       []
@@ -176,7 +190,11 @@ defmodule Algground.DataManager do
     stations_path
     |> File.stream!()
     |> CSV.parse_stream()
-    |> Stream.map(fn [id, municipality, _name] -> {municipality, id} end)
+    |> Stream.drop(1)  # Skip header row
+    |> Stream.map(fn [_id, _name, _district, municipality, _freguesia, _bacia, _altitude, _coord_x, _coord_y, _sistema_aquifero, _estado, marker_site | _rest] -> 
+      {municipality, marker_site}
+    end)
+    |> Stream.reject(fn {municipality, _} -> municipality == "" end)
     |> Enum.reduce(%{}, fn {municipality, id}, acc ->
       Map.update(acc, municipality, MapSet.new([id]), &MapSet.put(&1, id))
     end)
