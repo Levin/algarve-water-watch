@@ -11,10 +11,9 @@ defmodule AlggroundWeb.LiveHomePage do
     end_date = Date.utc_today()
     start_date = Date.add(end_date, -90)
     
-    # Load historical data for the graph
+    # Load historical data for the graph - last 4 quarters
     historical_measurements = 
-      0..-360  # Get last year of data in 90-day intervals, reversed range
-      |> Enum.take_every(90)
+      [-90, -180, -270, -360]  # Last 4 quarters
       |> Enum.map(fn days_offset ->
         date_start = Date.add(end_date, days_offset)
         date_end = Date.add(date_start, 90)
@@ -61,8 +60,7 @@ defmodule AlggroundWeb.LiveHomePage do
     
     # Load historical data for the graph
     historical_measurements = 
-      0..-360  # Get last year of data in 90-day intervals, reversed range
-      |> Enum.take_every(90)
+      [-90, -180, -270, -360]  # Last 4 quarters
       |> Enum.map(fn days_offset ->
         date_start = Date.add(new_end_date, days_offset)
         date_end = Date.add(date_start, 90)
@@ -101,8 +99,7 @@ defmodule AlggroundWeb.LiveHomePage do
       
       # Load historical data for the graph
       historical_measurements = 
-        0..-360  # Get last year of data in 90-day intervals, reversed range
-        |> Enum.take_every(90)
+        [-90, -180, -270, -360]  # Last 4 quarters
         |> Enum.map(fn days_offset ->
           date_start = Date.add(new_end_date, days_offset)
           date_end = Date.add(date_start, 90)
@@ -143,8 +140,7 @@ defmodule AlggroundWeb.LiveHomePage do
     
     # Load historical data for the graph
     historical_measurements = 
-      0..-360  # Get last year of data in 90-day intervals, reversed range
-      |> Enum.take_every(90)
+      [-90, -180, -270, -360]  # Last 4 quarters
       |> Enum.map(fn days_offset ->
         date_start = Date.add(end_date, days_offset)
         date_end = Date.add(date_start, 90)
@@ -228,7 +224,7 @@ defmodule AlggroundWeb.LiveHomePage do
           <%= display_groundwater(assigns) %>
           <%= if @active_municipality.measurements && length(@active_municipality.measurements) > 1 do %>
             <div class="mt-4 px-4 w-full overflow-x-auto">
-              <%= draw_groundwater(%{groundwater_levels: @active_municipality.measurements}, 700) %>
+              <%= draw_groundwater(@active_municipality, 700) %>
             </div>
           <% end %>
           <div class="flex justify-center px-4">
@@ -282,7 +278,7 @@ defmodule AlggroundWeb.LiveHomePage do
           </div>
 
             <div class="rounded-sm bg-white lg:rounded-t-[2rem] px-8 pt-4 contain block md:hidden">
-              <%= draw_groundwater(%{groundwater_levels: @active_municipality.measurements}, 280) %>
+              <%= draw_groundwater(@active_municipality, 280) %>
             </div>
         </div>
       </div>
@@ -290,16 +286,79 @@ defmodule AlggroundWeb.LiveHomePage do
     """
   end
 
-  defp draw_groundwater(%{groundwater_levels: levels}, width) when is_list(levels) and length(levels) > 0 do
-    graph = Contex.Sparkline.new(levels)
-    Contex.Sparkline.draw(%{graph | height: 300, width: width})
+  defp draw_groundwater(%{measurements: measurements} = municipality, width) when is_list(measurements) and length(measurements) > 0 do
+    # Filter out 0.0 values (insufficient data)
+    valid_measurements = Enum.reject(measurements, &(&1 == 0.0))
+    
+    case valid_measurements do
+      [] -> 
+        assigns = %{message: "No historical data available"}
+        ~H"""
+        <div class="flex justify-center items-center h-[100px] text-gray-500">
+          <%= @message %>
+        </div>
+        """
+        
+      measurements ->
+        # Create dataset with dates and measurements
+        data = 
+          measurements
+          |> Enum.with_index()
+          |> Enum.map(fn {level, i} -> 
+            [i + 1, level]  # Use numbers instead of strings for x-axis
+          end)
+
+        # Create dataset
+        dataset = Contex.Dataset.new(data, ["Quarter", "Level"])
+
+        # Create plot
+        plot = 
+          Contex.Plot.new(dataset, Contex.LinePlot, width, 300,
+            mapping: %{x_col: "Quarter", y_cols: ["Level"]})
+          |> Contex.Plot.titles("Groundwater Levels", "Past Year by Quarter")
+          |> Contex.Plot.axis_labels("Quarter", "Meters Below Ground")
+          |> Contex.Plot.plot_options(%{
+            legend_setting: :legend_none,
+            colour_palette: ["#4F46E5"],  # Indigo color
+            point_size: 4,
+            line_width: 2,
+            padding: 10,
+            show_gridlines: true,
+            gridline_stroke_width: 1,
+            custom_x_scale: %{min: 0, max: 5},  # Ensure we show all quarters
+            custom_x_formatter: fn x -> "Q#{trunc(x)}" end,  # Format x-axis labels as Q1, Q2, etc.
+            smoothed: false  # Set to true for curved lines, false for straight lines
+          })
+
+        # Add reference lines for percentiles if available
+        plot = 
+          case municipality do
+            %{percentiles: %{p30: p30, p70: p70}} when p30 > 0 and p70 > 0 ->
+              max_level = max(Enum.max(measurements), p70)
+              plot
+              |> Contex.Plot.plot_options(%{
+                custom_y_scale: %{min: 0, max: max_level * 1.1},
+                additional_plot_options: %{
+                  show_reference_line: true,
+                  reference_lines: [
+                    %{y: p30, colour: "#DC2626", line_style: :dashed, label: "Low Level (30th percentile)"},  # Red
+                    %{y: p70, colour: "#16A34A", line_style: :dashed, label: "High Level (70th percentile)"}  # Green
+                  ]
+                }
+              })
+            _ -> plot
+          end
+
+        Contex.Plot.to_svg(plot)
+    end
   end
 
-  defp draw_groundwater(_assigns, _width) do
-    assigns = %{inner_content: "No historical data available"}
+  defp draw_groundwater(_municipality, _width) do
+    assigns = %{message: "No historical data available"}
+    
     ~H"""
     <div class="flex justify-center items-center h-[100px] text-gray-500">
-      <%= @inner_content %>
+      <%= @message %>
     </div>
     """
   end
