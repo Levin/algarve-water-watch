@@ -1,33 +1,17 @@
 defmodule AlggroundWeb.LiveHomePage do
   use AlggroundWeb, :live_view
 
-  @region_names [
-    %{region: "Albufeira", image: "/images/albufeira.svg"},
-    %{region: "Alcoutim", image: ""},
-    %{region: "Aljezur", image: ""},
-    %{region: "Castro Marim", image: ""},
-    %{region: "Faro", image: ""},
-    %{region: "Lagoa", image: ""},
-    %{region: "Lagos", image: ""},
-    %{region: "Monchique", image: ""},
-    %{region: "Olhão", image: ""},
-    %{region: "Portimão", image: ""},
-    %{region: "São Brás de Alportel", image: ""},
-    %{region: "Silves", image: ""},
-    %{region: "Tavira", image: ""},
-    %{region: "Vila do Bispo", image: ""},
-    %{region: "Vila Real de Santo António", image: ""}
-  ]
+  alias Algground.DataManager
 
   def mount(_params, _session, socket) do
+    municipalities = DataManager.get_municipalities()
     regions =
-      Enum.map(@region_names, fn region ->
+      Enum.map(municipalities, fn region ->
         %{
           region: region.region,
           groundwater: trunc(:rand.uniform() * 100),
           rainfall: trunc(:rand.uniform() * 100),
           reservoir: trunc(:rand.uniform() * 1_000),
-          image: region.image
         }
       end)
 
@@ -37,7 +21,7 @@ defmodule AlggroundWeb.LiveHomePage do
      |> assign(:rainfall_levels, Enum.map(regions, & &1.rainfall))
      |> assign(:reservoir_levels, Enum.map(regions, & &1.reservoir))
      |> assign(:date_start, Datex.Date.today())
-     |> assign(:date_end, Datex.Date.add(Datex.Date.today(), 92))
+     |> assign(:date_end, Datex.Date.add(Datex.Date.today(), 14))
      |> assign(:regions, regions)
      |> assign(:display_groundwater, true)
      |> assign(:display_rainfall, false)
@@ -50,7 +34,7 @@ defmodule AlggroundWeb.LiveHomePage do
     reservoir = trunc(:rand.uniform() * 1_000)
 
     regions =
-      Enum.map(@region_names, fn region ->
+      Enum.map(socket.assigns.regions, fn region ->
         %{
           region: region.region,
           groundwater: groundwater,
@@ -70,8 +54,8 @@ defmodule AlggroundWeb.LiveHomePage do
      |> assign(:rainfall_levels, new_rainfalls)
      |> assign(:reservoir_levels, new_reservoirs)
      |> assign(:regions, regions)
-     |> assign(:date_start, Datex.Date.add(socket.assigns.date_start, -92))
-     |> assign(:date_end, Datex.Date.add(socket.assigns.date_end, -92))}
+     |> assign(:date_start, Datex.Date.add(socket.assigns.date_start, -14))
+     |> assign(:date_end, Datex.Date.add(socket.assigns.date_end, -14))}
   end
 
   def handle_event("forward", _params, socket) do
@@ -80,7 +64,7 @@ defmodule AlggroundWeb.LiveHomePage do
     reservoir = trunc(:rand.uniform() * 1_000)
 
     regions =
-      Enum.map(@region_names, fn region ->
+      Enum.map(socket.assigns.regions, fn region ->
         %{
           region: region.region,
           groundwater: groundwater,
@@ -100,8 +84,8 @@ defmodule AlggroundWeb.LiveHomePage do
      |> assign(:rainfall_levels, new_rainfalls)
      |> assign(:reservoir_levels, new_reservoirs)
      |> assign(:regions, regions)
-     |> assign(:date_start, Datex.Date.add(socket.assigns.date_start, 92))
-     |> assign(:date_end, Datex.Date.add(socket.assigns.date_end, 92))}
+     |> assign(:date_start, Datex.Date.add(socket.assigns.date_start, 14))
+     |> assign(:date_end, Datex.Date.add(socket.assigns.date_end, 14))}
   end
 
   def render(assigns) do
@@ -110,7 +94,6 @@ defmodule AlggroundWeb.LiveHomePage do
       <div class="bg-gray-50 py-6 sm:py-6 rounded-lg">
         <div class="mx-auto max-w-2xl px-6 lg:max-w-7xl lg:px-8">
           <div class="flex justify-center mb-6">
-            
             <.link
               navigate={~p"/feedback"}
               class="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"

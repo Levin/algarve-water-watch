@@ -4,15 +4,18 @@ defmodule AlggroundWeb.FeedbackPage do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(:form, to_form(%{
-       "missing_metrics" => "",
-       "best_feature" => "",
-       "missing_feature" => "",
-       "location_missing" => "no",
-       "location_missing_details" => "",
-       "map_essential" => "no",
-       "map_essential_details" => ""
-     }))
+     |> assign(
+       :form,
+       to_form(%{
+         "missing_metrics" => "",
+         "best_feature" => "",
+         "missing_feature" => "",
+         "location_missing" => "no",
+         "location_missing_details" => "",
+         "map_essential" => "no",
+         "map_essential_details" => ""
+       })
+     )
      |> assign(:errors, %{})}
   end
 
@@ -36,12 +39,13 @@ defmodule AlggroundWeb.FeedbackPage do
 
   def handle_event("validate", %{"feedback" => feedback}, socket) do
     case validate_feedback(feedback) do
-      {:ok, _} -> 
-        {:noreply, 
+      {:ok, _} ->
+        {:noreply,
          socket
          |> assign(:errors, %{})
          |> assign(:form, to_form(feedback))}
-      {:error, errors} -> 
+
+      {:error, errors} ->
         {:noreply,
          socket
          |> assign(:errors, errors)
@@ -52,14 +56,14 @@ defmodule AlggroundWeb.FeedbackPage do
   def handle_event("update_location_missing", %{"value" => value}, socket) do
     current_data = socket.assigns.form.params
     updated_data = Map.put(current_data, "location_missing", value)
-    
+
     {:noreply, assign(socket, :form, to_form(updated_data))}
   end
 
   def handle_event("update_map_essential", %{"value" => value}, socket) do
     current_data = socket.assigns.form.params
     updated_data = Map.put(current_data, "map_essential", value)
-    
+
     {:noreply, assign(socket, :form, to_form(updated_data))}
   end
 
@@ -88,15 +92,25 @@ defmodule AlggroundWeb.FeedbackPage do
       end
 
     errors =
-      if feedback["location_missing"] == "yes" && String.length(feedback["location_missing_details"] || "") < 3 do
-        Map.put(errors, :location_missing_details, "Please provide details about the missing location")
+      if feedback["location_missing"] == "yes" &&
+           String.length(feedback["location_missing_details"] || "") < 3 do
+        Map.put(
+          errors,
+          :location_missing_details,
+          "Please provide details about the missing location"
+        )
       else
         errors
       end
 
     errors =
-      if feedback["map_essential"] == "yes" && String.length(feedback["map_essential_details"] || "") < 3 do
-        Map.put(errors, :map_essential_details, "Please explain why you consider the map essential")
+      if feedback["map_essential"] == "yes" &&
+           String.length(feedback["map_essential_details"] || "") < 3 do
+        Map.put(
+          errors,
+          :map_essential_details,
+          "Please explain why you consider the map essential"
+        )
       else
         errors
       end
@@ -110,6 +124,7 @@ defmodule AlggroundWeb.FeedbackPage do
 
   defp save_feedback_to_csv(feedback) do
     csv_path = "feedback_data.csv"
+
     headers = [
       "Missing Metrics",
       "Best Feature",
@@ -131,8 +146,8 @@ defmodule AlggroundWeb.FeedbackPage do
     ]
 
     file_exists? = File.exists?(csv_path)
-    
-    rows = 
+
+    rows =
       if file_exists? do
         # Read existing content
         File.stream!(csv_path)
@@ -148,16 +163,22 @@ defmodule AlggroundWeb.FeedbackPage do
 
     # Write all rows back to file
     file = File.open!(csv_path, [:write, :utf8])
+
     CSV.encode(rows)
     |> Enum.each(&IO.write(file, &1))
+
     File.close(file)
   end
 
   defp escape_csv_field(nil), do: ~s("")
+
   defp escape_csv_field(field) do
-    field = String.replace(field, ~s("), ~s(""))  # Replace " with ""
+    # Replace " with ""
+    field = String.replace(field, ~s("), ~s(""))
+
     if String.contains?(field, [",", "\n", "\r", "\""]) do
-      ~s("#{field}")  # Wrap in quotes if contains special chars
+      # Wrap in quotes if contains special chars
+      ~s("#{field}")
     else
       field
     end
