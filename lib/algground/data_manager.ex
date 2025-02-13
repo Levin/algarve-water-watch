@@ -61,17 +61,22 @@ defmodule Algground.DataManager do
         nil -> 
           0.0
         capture_points -> 
-          levels = 
+          # Get measurements from all capture points
+          all_measurements = 
             capture_points
             |> MapSet.to_list()
             |> Enum.flat_map(fn point_id ->
               read_water_levels(point_id, start_date, end_date)
             end)
-            |> Enum.map(fn {_date, level} -> level end)
 
-          case levels do
-            [] -> 0.0
-            measurements -> Enum.sum(measurements) / length(measurements)
+          # Average all measurements for each date
+          case all_measurements do
+            [] -> 
+              0.0
+            measurements ->
+              measurements
+              |> Enum.map(fn {_date, level} -> level end)
+              |> then(fn levels -> Enum.sum(levels) / length(levels) end)
           end
       end
 

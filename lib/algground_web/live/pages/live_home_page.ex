@@ -7,9 +7,9 @@ defmodule AlggroundWeb.LiveHomePage do
     municipalities = DataManager.get_municipalities()
     active_municipality = Enum.random(municipalities)
     
-    # Convert Datex.Date to Elixir Date
-    start_date = Date.utc_today()
-    end_date = Date.add(Date.utc_today(), 90)
+    # Set date range to last 90 days
+    end_date = Date.utc_today()
+    start_date = Date.add(end_date, -90)
     
     # Load historical data for the graph
     historical_measurements = 
