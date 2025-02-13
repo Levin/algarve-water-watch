@@ -18,6 +18,7 @@ defmodule AlggroundWeb.Router do
     pipe_through :browser
 
     live "/", LiveHomePage
+    live "/feedback", FeedbackPage
   end
 
   # Other scopes may use custom stacks.

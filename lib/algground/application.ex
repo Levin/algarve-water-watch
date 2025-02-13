@@ -12,6 +12,7 @@ defmodule Algground.Application do
       Algground.Repo,
       {DNSCluster, query: Application.get_env(:algground, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Algground.PubSub},
+      {Algground.DataManager, nil},
       # Start the Finch HTTP client for sending emails
       {Finch, name: Algground.Finch},
       # Start a worker by calling: Algground.Worker.start_link(arg)
