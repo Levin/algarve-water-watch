@@ -16,12 +16,12 @@ defmodule AlggroundWeb.Components.Region do
     ~H"""
     <div
       phx-target={@myself}
-      phx-click={JS.toggle(to: "#information_#{@region.region}")}
+      phx-click={JS.toggle(to: "#information_#{@region.municipality}")}
       class="py-4 cursor-pointer text-center text-base font-semibold text-indigo-800 mb-2 bg-gray-50 rounded-lg"
     >
       <%= display_region(assigns) %>
 
-      <div id={"information_" <> @region.region} class="hidden">
+      <div id={"information_" <> @region.municipality} class="hidden">
         <div class=" mb-8">
           <div class="px-8 pt-8 sm:px-10 sm:pt-10">
             <p class="mt-2 text-md font-medium tracking-tight text-gray-600 max-lg:text-center">
@@ -29,22 +29,6 @@ defmodule AlggroundWeb.Components.Region do
             </p>
             <p class="mt-2 max-w-lg text-lg/6 text-gray-600 max-lg:text-center">
               <%= display_groundwater(assigns) %>
-            </p>
-          </div>
-          <div class="px-8 pt-8 sm:px-10 sm:pt-10">
-            <p class="mt-2 text-md font-medium tracking-tight text-gray-600 max-lg:text-center">
-              Rainfall
-            </p>
-            <p class="mt-2 max-w-lg text-lg/6 text-gray-600 max-lg:text-center text-indigo-800">
-              <%= display_rainfall(assigns) %>
-            </p>
-          </div>
-          <div class="px-8 pt-8 sm:px-10 sm:pt-10">
-            <p class="mt-2 text-md font-medium tracking-tight text-gray-600 max-lg:text-center">
-              Reservoirs
-            </p>
-            <p class="mt-2 max-w-lg text-lg/6 text-gray-600 max-lg:text-center text-indigo-800">
-              <%= display_reservoirs(assigns) %>
             </p>
           </div>
         </div>
@@ -57,17 +41,7 @@ defmodule AlggroundWeb.Components.Region do
     Enum.random([
       ~H"""
       <p class="mt-2 max-w-lg text-lg/6 text-green-600 max-lg:text-center">
-        <%= @region.region %>
-      </p>
-      """,
-      ~H"""
-      <p class="mt-2 max-w-lg text-lg/6 text-amber-500 max-lg:text-center">
-        <%= @region.region %>
-      </p>
-      """,
-      ~H"""
-      <p class="mt-2 max-w-lg text-lg/6 text-red-600 max-lg:text-center">
-        <%= @region.region %>
+        <%= @region.municipality %>
       </p>
       """
     ])
@@ -75,76 +49,27 @@ defmodule AlggroundWeb.Components.Region do
 
   defp display_groundwater(assigns) do
     cond do
-      assigns.region.groundwater >= 150 ->
+      assigns.region.groundwater_levels >= 150 ->
         ~H"""
         <p class="mt-2 max-w-lg text-lg/6 text-green-600 max-lg:text-center">
-          <%= @region.groundwater %>m
+          <%= @region.groundwater_levels %>m
         </p>
         """
 
-      assigns.region.groundwater < 150 and assigns.region.groundwater >= 50 ->
+      assigns.region.groundwater_levels < 150 and assigns.region.groundwater_levels >= 50 ->
         ~H"""
         <p class="mt-2 max-w-lg text-lg/6 text-amber-500 max-lg:text-center">
-          <%= @region.groundwater %>m
+          <%= @region.groundwater_levels %>m
         </p>
         """
 
-      assigns.region.groundwater < 50 ->
+      assigns.region.groundwater_levels < 50 ->
         ~H"""
         <p class="mt-2 max-w-lg text-lg/6 text-red-600 max-lg:text-center">
-          <%= @region.groundwater %>m
+          <%= @region.groundwater_levels %>m
         </p>
         """
     end
   end
 
-  defp display_rainfall(assigns) do
-    cond do
-      assigns.region.rainfall >= 80 ->
-        ~H"""
-        <p class="mt-2 max-w-lg text-lg/6 text-green-600 max-lg:text-center">
-          <%= @region.rainfall %>ml
-        </p>
-        """
-
-      assigns.region.rainfall < 80 and assigns.region.rainfall >= 30 ->
-        ~H"""
-        <p class="mt-2 max-w-lg text-lg/6 text-amber-500 max-lg:text-center">
-          <%= @region.rainfall %>ml
-        </p>
-        """
-
-      assigns.region.rainfall < 30 ->
-        ~H"""
-        <p class="mt-2 max-w-lg text-lg/6 text-red-600 max-lg:text-center">
-          <%= @region.rainfall %>ml
-        </p>
-        """
-    end
-  end
-
-  defp display_reservoirs(assigns) do
-    cond do
-      assigns.region.reservoir >= 6_000_000 ->
-        ~H"""
-        <p class="mt-2 max-w-lg text-lg/6 text-green-600 max-lg:text-center">
-          <%= @region.reservoir %> 10⁶m³
-        </p>
-        """
-
-      assigns.region.reservoir < 6_000_000 and assigns.region.reservoir >= 1_200_000 ->
-        ~H"""
-        <p class="mt-2 max-w-lg text-lg/6 text-amber-500 max-lg:text-center">
-          <%= @region.reservoir %> 10⁶m³
-        </p>
-        """
-
-      assigns.region.reservoir < 1_200_000 ->
-        ~H"""
-        <p class="mt-2 max-w-lg text-lg/6 text-red-600 max-lg:text-center">
-          <%= @region.reservoir %> 10⁶m³
-        </p>
-        """
-    end
-  end
 end

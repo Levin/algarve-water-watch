@@ -5,85 +5,55 @@ defmodule AlggroundWeb.LiveHomePage do
 
   def mount(_params, _session, socket) do
     municipalities = DataManager.get_municipalities()
-    regions =
-      Enum.map(municipalities, fn region ->
-        %{
-          region: region.region,
-          groundwater: trunc(:rand.uniform() * 100),
-          rainfall: trunc(:rand.uniform() * 100),
-          reservoir: trunc(:rand.uniform() * 1_000),
-        }
-      end)
 
     {:ok,
      socket
-     |> assign(:groundwater_levels, Enum.map(regions, & &1.groundwater))
-     |> assign(:rainfall_levels, Enum.map(regions, & &1.rainfall))
-     |> assign(:reservoir_levels, Enum.map(regions, & &1.reservoir))
+     |> assign(:groundwater_levels, Enum.map(municipalities, & &1.groundwater_levels))
      |> assign(:date_start, Datex.Date.today())
      |> assign(:date_end, Datex.Date.add(Datex.Date.today(), 14))
-     |> assign(:regions, regions)
-     |> assign(:display_groundwater, true)
-     |> assign(:display_rainfall, false)
-     |> assign(:display_reservoir, false)}
+     |> assign(:municipalities, municipalities)
+     |> assign(:display_groundwater, true)}
   end
 
   def handle_event("backward", _params, socket) do
-    groundwater = trunc(:rand.uniform() * 100)
-    rainfall = trunc(:rand.uniform() * 100)
-    reservoir = trunc(:rand.uniform() * 1_000)
+    # TODO: caluclate the new groundwater levels using DataManager.get_biweekly_waterlevels
+    new_groundwater_level = trunc(:rand.uniform() * 100)
 
-    regions =
-      Enum.map(socket.assigns.regions, fn region ->
+    municipalities =
+      Enum.map(socket.assigns.municipalities, fn municipality ->
         %{
-          region: region.region,
-          groundwater: groundwater,
-          rainfall: rainfall,
-          reservoir: reservoir,
-          image: region.image
+          municipality: municipality.municipality,
+          groundwater_levels: new_groundwater_level,
         }
       end)
 
-    new_groundwaters = maybe_remove_value([groundwater] ++ socket.assigns.groundwater_levels)
-    new_rainfalls = maybe_remove_value([rainfall] ++ socket.assigns.rainfall_levels)
-    new_reservoirs = maybe_remove_value([reservoir] ++ socket.assigns.reservoir_levels)
+    new_groundwater_levels = maybe_remove_value([new_groundwater_level] ++ socket.assigns.groundwater_levels)
 
     {:noreply,
      socket
-     |> assign(:groundwater_levels, new_groundwaters)
-     |> assign(:rainfall_levels, new_rainfalls)
-     |> assign(:reservoir_levels, new_reservoirs)
-     |> assign(:regions, regions)
+     |> assign(:groundwater_levels, new_groundwater_levels)
+     |> assign(:municipalities, municipalities)
      |> assign(:date_start, Datex.Date.add(socket.assigns.date_start, -14))
      |> assign(:date_end, Datex.Date.add(socket.assigns.date_end, -14))}
   end
 
   def handle_event("forward", _params, socket) do
-    groundwater = trunc(:rand.uniform() * 100)
-    rainfall = trunc(:rand.uniform() * 100)
-    reservoir = trunc(:rand.uniform() * 1_000)
+    new_groundwater_level = trunc(:rand.uniform() * 100)
 
-    regions =
-      Enum.map(socket.assigns.regions, fn region ->
+    municipalities =
+      Enum.map(socket.assigns.municipalities, fn municipality ->
         %{
-          region: region.region,
-          groundwater: groundwater,
-          rainfall: rainfall,
-          reservoir: reservoir,
-          image: region.image
+          municipality: municipality.municipality,
+          groundwater_levels: new_groundwater_level,
         }
       end)
 
-    new_groundwaters = maybe_add_value(socket.assigns.groundwater_levels ++ [groundwater])
-    new_rainfalls = maybe_add_value(socket.assigns.rainfall_levels ++ [rainfall])
-    new_reservoirs = maybe_add_value(socket.assigns.reservoir_levels ++ [reservoir])
+    new_groundwater_levels = maybe_add_value(socket.assigns.groundwater_levels ++ [new_groundwater_level])
 
     {:noreply,
      socket
-     |> assign(:groundwater_levels, new_groundwaters)
-     |> assign(:rainfall_levels, new_rainfalls)
-     |> assign(:reservoir_levels, new_reservoirs)
-     |> assign(:regions, regions)
+     |> assign(:groundwater_levels, new_groundwater_levels)
+     |> assign(:municipalities, municipalities)
      |> assign(:date_start, Datex.Date.add(socket.assigns.date_start, 14))
      |> assign(:date_end, Datex.Date.add(socket.assigns.date_end, 14))}
   end
@@ -117,10 +87,10 @@ defmodule AlggroundWeb.LiveHomePage do
             </svg>
           </div>
           <p class="mx-auto max-w-lg text-pretty text-center font-medium tracking-tight text-gray-950 text-3xl lg:mt-4 mt-10">
-            in <%= get_region(@regions, "Albufeira").region %>
+            in <%= get_municipality(@municipalities, "Albufeira").municipality %>
           </p>
           <p class="mx-auto max-w-lg text-pretty text-center text-4xl font-medium tracking-tight sm:text-3xl ">
-            <%= display_groundwater(get_region(@regions, "Albufeira")) %>
+            <%= display_groundwater(get_municipality(@municipalities, "Albufeira")) %>
           </p>
           <div class="flex justify-left ">
             <p class="flex gap-2 mx-auto text-pretty font-sm tracking-tight text-gray-400 text-sm cursor-pointer">
@@ -166,11 +136,11 @@ defmodule AlggroundWeb.LiveHomePage do
             <div class="absolute inset-px rounded-lg bg-white lg:rounded-l-[2rem]"></div>
             <div class="relative flex h-full flex-col overflow-hidden rounded-[calc(theme(borderRadius.lg)+1px)] lg:rounded-l-[calc(2rem+1px)]">
               <div class="px-8 pb-3 pt-8 sm:px-10 sm:pb-0 sm:pt-10">
-                <%= for region <- @regions do %>
+                <%= for municipality <- @municipalities do %>
                   <.live_component
                     module={AlggroundWeb.Components.Region}
-                    region={region}
-                    id={region.region <> "#{System.unique_integer()}"}
+                    region={municipality}
+                    id={municipality.municipality <> "#{System.unique_integer()}"}
                   />
                 <% end %>
               </div>
@@ -191,24 +161,24 @@ defmodule AlggroundWeb.LiveHomePage do
 
   defp display_groundwater(assigns) do
     cond do
-      assigns.groundwater >= 150 ->
+      assigns.groundwater_levels >= 150 ->
         ~H"""
         <p class="mt-2 mx-auto flex justify-center text-lg/6 text-green-600 ">
-          <%= @groundwater %> m
+          <%= @groundwater_levels %> m
         </p>
         """
 
-      assigns.groundwater < 150 and assigns.groundwater >= 50 ->
+      assigns.groundwater_levels < 150 and assigns.groundwater_levels >= 50 ->
         ~H"""
         <p class="mt-2 mx-auto flex justify-center text-lg/6 text-amber-600 ">
-          <%= @groundwater %> m
+          <%= @groundwater_levels %> m
         </p>
         """
 
-      assigns.groundwater < 50 ->
+      assigns.groundwater_levels < 50 ->
         ~H"""
         <p class="mt-2 mx-auto flex justify-center text-lg/6 text-red-600 ">
-          <%= @groundwater %> m
+          <%= @groundwater_levels %> m
         </p>
         """
     end
@@ -228,5 +198,5 @@ defmodule AlggroundWeb.LiveHomePage do
 
   defp maybe_remove_value(measurements), do: measurements
 
-  defp get_region(regions, region), do: List.first(Enum.filter(regions, &(&1.region == region)))
+  defp get_municipality(municipalitys, municipality), do: List.first(Enum.filter(municipalitys, &(&1.municipality == municipality)))
 end
