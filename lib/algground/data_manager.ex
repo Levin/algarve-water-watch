@@ -3,9 +3,9 @@ defmodule Algground.DataManager do
   require Logger
   alias NimbleCSV.RFC4180, as: CSV
 
-  @data_folder "priv/data/"
+  @data_folder "data"
   @stations_file "algarve_stations.csv"
-  @capture_points_folder "capture_points/"
+  @capture_points_folder "capture_points"
 
   # Public function to get the municipality map
   def get_municipality_map do
@@ -135,33 +135,38 @@ defmodule Algground.DataManager do
         file_path
         |> File.stream!()
         |> CSV.parse_stream()
-        |> Stream.drop(1)  # Skip header
-        |> Stream.map(fn [date_str, level_str] ->
-          # Convert date string to Date
-          with {:ok, date} <- Date.from_iso8601(date_str),
-               {level, _} <- Float.parse(level_str) do
-            {date, level}
-          else
-            _ -> nil
-          end
+        |> Stream.map(fn [date, level] ->
+          {Date.from_iso8601!(date), String.to_float(level)}
         end)
-        |> Stream.reject(&is_nil/1)
         |> Stream.filter(fn {date, _level} ->
-          Date.compare(date, start_date) in [:gt, :eq] and
-            Date.compare(date, end_date) in [:lt, :eq]
+          Date.compare(date, start_date) != :lt && Date.compare(date, end_date) != :gt
         end)
-        |> Enum.map(fn {_date, level} -> level end)
-        |> case do
-          [] -> nil
-          levels -> Enum.sum(levels) / length(levels)
-        end
-      false -> 
-        nil
+        |> Enum.to_list()
+
+      false ->
+        []
+    end
+  end
+
+  defp get_all_water_levels(point_id) do
+    file_path = get_file_path(Path.join(@capture_points_folder, "#{point_id}.csv"))
+
+    if File.exists?(file_path) do
+      file_path
+      |> File.stream!()
+      |> CSV.parse_stream()
+      |> Stream.map(fn [_date, level] -> String.to_float(level) end)
+      |> Enum.to_list()
+    else
+      []
     end
   end
 
   defp get_file_path(file) do
-    Path.join(Application.app_dir(:algground, "priv"), file)
+    :algground
+    |> Application.app_dir("priv")
+    |> Path.join(@data_folder)
+    |> Path.join(file)
   end
 
   # Creates a map of municipalities and their capture point IDs
@@ -171,45 +176,9 @@ defmodule Algground.DataManager do
     stations_path
     |> File.stream!()
     |> CSV.parse_stream()
-    # Skip header row
-    |> Stream.drop(1)
-    |> Enum.reduce(%{}, fn row, acc ->
-      [
-        _id,
-        _name,
-        _district,
-        municipality,
-        _freguesia,
-        _bacia,
-        _altitude,
-        _coord_x,
-        _coord_y,
-        _sistema_aquifero,
-        _estado,
-        marker_site,
-        _latitude,
-        _longitude,
-        _site_id
-      ] = row
-
-      # Skip empty municipalities
-      case municipality do
-        "" ->
-          acc
-
-        municipality ->
-          Map.update(
-            acc,
-            municipality,
-            %{
-              municipality: municipality,
-              capture_points: MapSet.new([marker_site])
-            },
-            fn existing ->
-              %{existing | capture_points: MapSet.put(existing.capture_points, marker_site)}
-          end
-          )
-      end
+    |> Stream.map(fn [id, municipality, _name] -> {municipality, id} end)
+    |> Enum.reduce(%{}, fn {municipality, id}, acc ->
+      Map.update(acc, municipality, MapSet.new([id]), &MapSet.put(&1, id))
     end)
   end
 end
