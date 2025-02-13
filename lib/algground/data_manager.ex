@@ -22,6 +22,10 @@ defmodule Algground.DataManager do
     GenServer.call(__MODULE__, {:calculate_water_levels, municipality, start_date, end_date})
   end
 
+  def calculate_percentiles(municipality) do
+    GenServer.call(__MODULE__, {:calculate_percentiles, municipality})
+  end
+
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, nil, name: __MODULE__)
   end
@@ -42,7 +46,7 @@ defmodule Algground.DataManager do
     municipalities = 
       municipality_map
       |> Map.keys()
-      |> Enum.map(fn municipality -> %{municipality: String.capitalize(municipality),groundwater_levels: 0} end)
+      |> Enum.map(fn municipality -> %{municipality: String.capitalize(municipality), groundwater_levels: 0} end)
     {:reply, municipalities, state}
   end
 
@@ -72,6 +76,54 @@ defmodule Algground.DataManager do
       end
 
     {:reply, water_levels, state}
+  end
+
+  def handle_call({:calculate_percentiles, municipality}, _from, state) do
+    municipalities = Map.get(state, :municipality_map, %{})
+    capture_points = 
+      case Map.get(municipalities, String.upcase(municipality)) do
+        %{capture_points: capture_points} -> capture_points
+        %{} -> MapSet.new()
+      end
+
+    all_levels = 
+      capture_points
+      |> MapSet.to_list()
+      |> Enum.flat_map(fn point_id ->
+        csv_path = Path.join([@data_folder, @capture_points_folder, "#{point_id}.csv"])
+        
+        if File.exists?(csv_path) do
+          csv_path
+          |> File.stream!()
+          |> CSV.parse_stream()
+          |> Stream.drop(1)  # Skip header
+          |> Stream.map(fn [_date, level] -> 
+            case Float.parse(level) do
+              {value, _} -> value
+              :error -> nil
+            end
+          end)
+          |> Stream.filter(&(&1 != nil))  # Remove nil values
+          |> Enum.to_list()
+        else
+          []
+        end
+      end)
+      |> Enum.sort()
+
+    case all_levels do
+      [] -> 
+        {:reply, %{p30: 0.0, p70: 0.0}, state}  # Default if no data
+      levels -> 
+        len = length(levels)
+        p30_index = floor(len * 0.3)
+        p70_index = floor(len * 0.7)
+        
+        {:reply, %{
+          p30: Enum.at(levels, p30_index),
+          p70: Enum.at(levels, p70_index)
+        }, state}
+    end
   end
 
   # Shared function to read and process water levels from a CSV file

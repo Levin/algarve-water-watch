@@ -9,12 +9,22 @@ defmodule AlggroundWeb.LiveHomePage do
     
     # Convert Datex.Date to Elixir Date
     start_date = Date.utc_today()
-    end_date = Date.add(Date.utc_today(), 14)
+    end_date = Date.add(Date.utc_today(), 90)
     
-    # Get water levels for the active municipality
-    water_levels = DataManager.calculate_municipality_water_level(active_municipality.municipality, start_date, end_date)
+    # Get water levels and percentiles for the active municipality
+    water_levels = DataManager.calculate_municipality_water_level(
+      active_municipality.municipality,
+      start_date,
+      end_date
+    )
     
-    active_municipality = Map.put(active_municipality, :groundwater_levels, water_levels)
+    percentiles = DataManager.calculate_percentiles(active_municipality.municipality)
+    
+    active_municipality = 
+      active_municipality
+      |> Map.put(:groundwater_levels, water_levels)
+      |> Map.put(:percentiles, percentiles)
+      |> Map.put(:measurements, [water_levels])
     
     {:ok,
      socket
@@ -27,8 +37,8 @@ defmodule AlggroundWeb.LiveHomePage do
   end
 
   def handle_event("backward", _params, socket) do
-    new_start_date = Date.add(socket.assigns.date_start, -14)
-    new_end_date = Date.add(socket.assigns.date_end, -14)
+    new_start_date = Date.add(socket.assigns.date_start, -90)
+    new_end_date = Date.add(socket.assigns.date_end, -90)
     
     # Calculate new water levels for the active municipality
     water_levels = DataManager.calculate_municipality_water_level(
@@ -37,35 +47,45 @@ defmodule AlggroundWeb.LiveHomePage do
       new_end_date
     )
     
-    # Update active municipality with new water levels
-    active_municipality = Map.put(socket.assigns.active_municipality, :groundwater_levels, water_levels)
+    # Update active municipality with new water levels and measurements
+    active_municipality = 
+      socket.assigns.active_municipality
+      |> Map.put(:groundwater_levels, water_levels)
+      |> update_measurements(water_levels)
 
     {:noreply,
      socket
-     |> assign(:active_municipality, active_municipality)
      |> assign(:date_start, new_start_date)
-     |> assign(:date_end, new_end_date)}
+     |> assign(:date_end, new_end_date)
+     |> assign(:active_municipality, active_municipality)}
   end
 
   def handle_event("forward", _params, socket) do
-    new_start_date = Date.add(socket.assigns.date_start, 14)
-    new_end_date = Date.add(socket.assigns.date_end, 14)
-    
-    # Calculate new water levels for the active municipality
-    water_levels = DataManager.calculate_municipality_water_level(
-      socket.assigns.active_municipality.municipality,
-      new_start_date,
-      new_end_date
-    )
-    
-    # Update active municipality with new water levels
-    active_municipality = Map.put(socket.assigns.active_municipality, :groundwater_levels, water_levels)
+    if can_go_forward?(socket.assigns.date_end) do
+      new_start_date = Date.add(socket.assigns.date_start, 90)
+      new_end_date = Date.add(socket.assigns.date_end, 90)
+      
+      # Calculate new water levels for the active municipality
+      water_levels = DataManager.calculate_municipality_water_level(
+        socket.assigns.active_municipality.municipality,
+        new_start_date,
+        new_end_date
+      )
+      
+      # Update active municipality with new water levels and measurements
+      active_municipality = 
+        socket.assigns.active_municipality
+        |> Map.put(:groundwater_levels, water_levels)
+        |> update_measurements(water_levels)
 
-    {:noreply,
-     socket
-     |> assign(:active_municipality, active_municipality)
-     |> assign(:date_start, new_start_date)
-     |> assign(:date_end, new_end_date)}
+      {:noreply,
+       socket
+       |> assign(:date_start, new_start_date)
+       |> assign(:date_end, new_end_date)
+       |> assign(:active_municipality, active_municipality)}
+    else
+      {:noreply, socket}
+    end
   end
 
   def handle_event("select_municipality", %{"municipality" => municipality}, socket) do
@@ -76,16 +96,30 @@ defmodule AlggroundWeb.LiveHomePage do
       socket.assigns.date_end
     )
     
+    percentiles = DataManager.calculate_percentiles(municipality)
+    
     # Find the municipality in the list and update its water levels
     active_municipality = 
       Enum.find(socket.assigns.municipalities, fn m -> 
         m.municipality == municipality
       end)
       |> Map.put(:groundwater_levels, water_levels)
+      |> Map.put(:percentiles, percentiles)
+      |> Map.put(:measurements, [water_levels])  # Initialize measurements
 
     {:noreply,
      socket
      |> assign(:active_municipality, active_municipality)}
+  end
+
+  defp update_measurements(municipality, water_levels) do
+    measurements = [water_levels | (Map.get(municipality, :measurements, []))]
+    measurements = if length(measurements) > 15, do: Enum.take(measurements, 15), else: measurements
+    Map.put(municipality, :measurements, measurements)
+  end
+
+  defp can_go_forward?(end_date) do
+    Date.compare(end_date, Date.utc_today()) != :gt
   end
 
   def render(assigns) do
@@ -103,14 +137,24 @@ defmodule AlggroundWeb.LiveHomePage do
           </div>
 
           <div class="flex justify-evenly h-8">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" phx-click="backward">
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              viewBox="0 0 448 512" 
+              phx-click="backward"
+              class="cursor-pointer"
+            >
               <path d="M9.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.2 288 416 288c17.7 0 32-14.3 32-32s-14.3-32-32-32l-306.7 0L214.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z" />
             </svg>
             <p class="mx-auto max-w-lg text-pretty text-center font-medium tracking-tight text-gray-400 text-3xl">
               <%= Date.to_string(@date_start) %> to <%= Date.to_string(@date_end) %>
             </p>
 
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" phx-click="forward">
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              viewBox="0 0 448 512" 
+              phx-click={if can_go_forward?(@date_end), do: "forward"}
+              class={"cursor-pointer #{if !can_go_forward?(@date_end), do: "opacity-50"}"}
+            >
               <path d="M438.6 278.6c12.5-12.5 12.5-32.8 0-45.3l-160-160c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L338.8 224 32 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l306.7 0L233.4 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l160-160z" />
             </svg>
           </div>
@@ -118,7 +162,7 @@ defmodule AlggroundWeb.LiveHomePage do
             in <%= @active_municipality.municipality %>
           </p>
           <p class="mx-auto max-w-lg text-pretty text-center text-4xl font-medium tracking-tight sm:text-3xl ">
-            <%= display_groundwater(@active_municipality) %>
+            <%= display_groundwater(assigns) %>
           </p>
           <div class="flex justify-left ">
             <p class="flex gap-2 mx-auto text-pretty font-sm tracking-tight text-gray-400 text-sm cursor-pointer">
@@ -133,6 +177,12 @@ defmodule AlggroundWeb.LiveHomePage do
               </svg>
             </p>
           </div>
+
+          <%= if @active_municipality.measurements && length(@active_municipality.measurements) > 1 do %>
+            <div class="mt-4">
+              <%= draw_groundwater(%{groundwater_levels: @active_municipality.measurements}, 500) %>
+            </div>
+          <% end %>
 
           <div class="mt-10 grid gap-4 sm:mt-4 lg:rounded-t-[2rem]">
             <div class="relative mb-4">
@@ -187,43 +237,32 @@ defmodule AlggroundWeb.LiveHomePage do
   end
 
   defp display_groundwater(assigns) do
+    %{groundwater_levels: levels, percentiles: %{p30: p30, p70: p70}} = assigns.active_municipality
+
     cond do
-      assigns.groundwater_levels >= 150 ->
+      levels >= p70 ->
         ~H"""
-        <p class="mt-2 mx-auto flex justify-center text-lg/6 text-green-600 ">
-          <%= @groundwater_levels %> m
+        <p class="mt-2 mx-auto flex justify-center text-lg/6 text-green-600">
+          <%= @active_municipality.groundwater_levels %> m
         </p>
         """
 
-      assigns.groundwater_levels < 150 and assigns.groundwater_levels >= 50 ->
+      levels >= p30 ->
         ~H"""
-        <p class="mt-2 mx-auto flex justify-center text-lg/6 text-amber-600 ">
-          <%= @groundwater_levels %> m
+        <p class="mt-2 mx-auto flex justify-center text-lg/6 text-amber-600">
+          <%= @active_municipality.groundwater_levels %> m
         </p>
         """
 
-      assigns.groundwater_levels < 50 ->
+      true ->
         ~H"""
-        <p class="mt-2 mx-auto flex justify-center text-lg/6 text-red-600 ">
-          <%= @groundwater_levels %> m
+        <p class="mt-2 mx-auto flex justify-center text-lg/6 text-red-600">
+          <%= @active_municipality.groundwater_levels %> m
         </p>
         """
     end
   end
 
-  defp maybe_add_value(measurements) when length(measurements) > 15,
-    do: Enum.drop(measurements, 1)
-
-  defp maybe_add_value(measurements), do: measurements
-
-  defp maybe_remove_value(measurements) when length(measurements) > 15 do
-    measurements
-    |> Enum.reverse()
-    |> Enum.drop(1)
-    |> Enum.reverse()
-  end
-
-  defp maybe_remove_value(measurements), do: measurements
-
   defp get_municipality(municipalitys, municipality), do: List.first(Enum.filter(municipalitys, &(&1.municipality == municipality)))
+
 end
