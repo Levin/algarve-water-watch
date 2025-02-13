@@ -3,7 +3,7 @@ defmodule Algground.DataManager do
   require Logger
   alias NimbleCSV.RFC4180, as: CSV
 
-  @data_folder "data/"
+  @data_folder "priv/data/"
   @stations_file "algarve_stations.csv"
   @capture_points_folder "capture_points/"
 
@@ -90,7 +90,7 @@ defmodule Algground.DataManager do
       capture_points
       |> MapSet.to_list()
       |> Enum.flat_map(fn point_id ->
-        csv_path = Path.join([@data_folder, @capture_points_folder, "#{point_id}.csv"])
+        csv_path = get_file_path(Path.join(@capture_points_folder, "#{point_id}.csv"))
         
         if File.exists?(csv_path) do
           csv_path
@@ -128,7 +128,7 @@ defmodule Algground.DataManager do
 
   # Shared function to read and process water levels from a CSV file
   defp read_water_levels(point_id, start_date, end_date) do
-    file_path = Path.join([@data_folder, @capture_points_folder, "#{point_id}.csv"])
+    file_path = get_file_path(Path.join(@capture_points_folder, "#{point_id}.csv"))
 
     case File.exists?(file_path) do
       true ->
@@ -160,9 +160,13 @@ defmodule Algground.DataManager do
     end
   end
 
+  defp get_file_path(file) do
+    Path.join(Application.app_dir(:algground, "priv"), file)
+  end
+
   # Creates a map of municipalities and their capture point IDs
   defp create_municipality_map do
-    stations_path = Path.join(@data_folder, @stations_file)
+    stations_path = get_file_path(@stations_file)
 
     stations_path
     |> File.stream!()
