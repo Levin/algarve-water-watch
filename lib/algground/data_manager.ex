@@ -46,7 +46,7 @@ defmodule Algground.DataManager do
     municipalities = 
       municipality_map
       |> Map.keys()
-      |> Enum.map(fn municipality -> %{municipality: String.capitalize(municipality), groundwater_levels: 0} end)
+      |> Enum.map(fn municipality -> %{municipality: String.capitalize(municipality), groundwater_levels: nil} end)
     {:reply, municipalities, state}
   end
 
