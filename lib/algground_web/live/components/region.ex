@@ -15,8 +15,8 @@ defmodule AlggroundWeb.Components.Region do
   def render(assigns) do
     ~H"""
     <div
-      phx-target={@myself}
-      phx-click={JS.toggle(to: "#information_#{@region.municipality}")}
+      phx-click="select_municipality"
+      phx-value-municipality={@region.municipality}
       class="py-4 cursor-pointer text-center text-base font-semibold text-indigo-800 mb-2 bg-gray-50 rounded-lg"
     >
       <%= display_region(assigns) %>

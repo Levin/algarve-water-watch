@@ -18,6 +18,7 @@ defmodule Algground.DataManager do
   end
 
   def calculate_municipality_water_level(municipality, start_date, end_date) do
+    dbg()
     GenServer.call(__MODULE__, {:calculate_water_levels, municipality, start_date, end_date})
   end
 
@@ -39,11 +40,11 @@ defmodule Algground.DataManager do
 
   def handle_call(:get_municipality_skeletons, _from, %{municipality_map: municipality_map} = state) do
     municipalities = 
-    municipality_map
+      municipality_map
       |> Map.keys()
       |> Enum.map(fn municipality -> %{municipality: String.capitalize(municipality),groundwater_levels: 0} end)
     {:reply, municipalities, state}
-    end
+  end
 
   def handle_call(:get_municipality_map, _from, state) do
     {:reply, Map.get(state, :municipality_map, %{}), state}
@@ -52,7 +53,7 @@ defmodule Algground.DataManager do
   def handle_call({:calculate_water_levels, municipality, start_date, end_date}, _from, state) do
     municipalities = Map.get(state, :municipality_map, %{})
     water_levels = 
-      case Map.get(municipalities, municipality, %{}) do
+      case Map.get(municipalities, String.upcase(municipality)) do
         %{
           municipality: municipality,
           capture_points: capture_points
@@ -60,49 +61,51 @@ defmodule Algground.DataManager do
           capture_points
           |> MapSet.to_list()
           |> Enum.map(fn point_id ->
-            # 1. Read through the files in capture points
-            file_path = Path.join([@data_folder, @capture_points_folder, "#{point_id}.csv"])
-
-            case File.exists?(file_path) do
-              true ->
-                file_path
-                |> File.stream!()
-                |> CSV.parse_stream()
-                |> Stream.drop(1)  # Skip header
-                |> Stream.map(fn [date_str, level_str] ->
-                  # Convert date string to Date
-                  with {:ok, date} <- Date.from_iso8601(date_str),
-                    {level, _} <- Float.parse(level_str) do
-                    {date, level}
-                  else
-                    _ -> nil
-                  end
-                end)
-                |> Stream.reject(&is_nil/1)
-                # 2. Find datapoints between start and end date
-                |> Stream.filter(fn {date, _level} ->
-                  Date.compare(date, start_date) in [:gt, :eq] and
-                    Date.compare(date, end_date) in [:lt, :eq]
-                end)
-                # 3. Extract measurement values only
-                |> Enum.map(fn {_date, level} -> level end)
-                |> case do
-                  [] -> nil
-                  levels -> Enum.sum(levels) / length(levels)  # Calculate average
-                end
-              false -> 
-                nil
-            end
+            read_water_levels(point_id, start_date, end_date)
           end)
           |> Enum.reject(&is_nil/1)
           |> case do
-            [] -> 0  # Return 0 if no valid measurements found
-            measurements -> Enum.sum(measurements) / length(measurements)  # Average across all stations
+            [] -> 0
+            measurements -> Enum.sum(measurements) / length(measurements)
           end
         %{} -> 0
       end
 
     {:reply, water_levels, state}
+  end
+
+  # Shared function to read and process water levels from a CSV file
+  defp read_water_levels(point_id, start_date, end_date) do
+    file_path = Path.join([@data_folder, @capture_points_folder, "#{point_id}.csv"])
+
+    case File.exists?(file_path) do
+      true ->
+        file_path
+        |> File.stream!()
+        |> CSV.parse_stream()
+        |> Stream.drop(1)  # Skip header
+        |> Stream.map(fn [date_str, level_str] ->
+          # Convert date string to Date
+          with {:ok, date} <- Date.from_iso8601(date_str),
+               {level, _} <- Float.parse(level_str) do
+            {date, level}
+          else
+            _ -> nil
+          end
+        end)
+        |> Stream.reject(&is_nil/1)
+        |> Stream.filter(fn {date, _level} ->
+          Date.compare(date, start_date) in [:gt, :eq] and
+            Date.compare(date, end_date) in [:lt, :eq]
+        end)
+        |> Enum.map(fn {_date, level} -> level end)
+        |> case do
+          [] -> nil
+          levels -> Enum.sum(levels) / length(levels)
+        end
+      false -> 
+        nil
+    end
   end
 
   # Creates a map of municipalities and their capture point IDs

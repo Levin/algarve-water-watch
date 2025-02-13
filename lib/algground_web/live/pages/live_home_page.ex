@@ -5,57 +5,87 @@ defmodule AlggroundWeb.LiveHomePage do
 
   def mount(_params, _session, socket) do
     municipalities = DataManager.get_municipalities()
-
+    active_municipality = Enum.random(municipalities)
+    
+    # Convert Datex.Date to Elixir Date
+    start_date = Date.utc_today()
+    end_date = Date.add(Date.utc_today(), 14)
+    
+    # Get water levels for the active municipality
+    water_levels = DataManager.calculate_municipality_water_level(active_municipality.municipality, start_date, end_date)
+    
+    active_municipality = Map.put(active_municipality, :groundwater_levels, water_levels)
+    
     {:ok,
      socket
      |> assign(:groundwater_levels, Enum.map(municipalities, & &1.groundwater_levels))
-     |> assign(:date_start, Datex.Date.today())
-     |> assign(:date_end, Datex.Date.add(Datex.Date.today(), 14))
+     |> assign(:active_municipality, active_municipality)
+     |> assign(:date_start, start_date)
+     |> assign(:date_end, end_date)
      |> assign(:municipalities, municipalities)
      |> assign(:display_groundwater, true)}
   end
 
   def handle_event("backward", _params, socket) do
-    # TODO: caluclate the new groundwater levels using DataManager.get_biweekly_waterlevels
-    new_groundwater_level = trunc(:rand.uniform() * 100)
-
-    municipalities =
-      Enum.map(socket.assigns.municipalities, fn municipality ->
-        %{
-          municipality: municipality.municipality,
-          groundwater_levels: new_groundwater_level,
-        }
-      end)
-
-    new_groundwater_levels = maybe_remove_value([new_groundwater_level] ++ socket.assigns.groundwater_levels)
+    new_start_date = Date.add(socket.assigns.date_start, -14)
+    new_end_date = Date.add(socket.assigns.date_end, -14)
+    
+    # Calculate new water levels for the active municipality
+    water_levels = DataManager.calculate_municipality_water_level(
+      socket.assigns.active_municipality.municipality,
+      new_start_date,
+      new_end_date
+    )
+    
+    # Update active municipality with new water levels
+    active_municipality = Map.put(socket.assigns.active_municipality, :groundwater_levels, water_levels)
 
     {:noreply,
      socket
-     |> assign(:groundwater_levels, new_groundwater_levels)
-     |> assign(:municipalities, municipalities)
-     |> assign(:date_start, Datex.Date.add(socket.assigns.date_start, -14))
-     |> assign(:date_end, Datex.Date.add(socket.assigns.date_end, -14))}
+     |> assign(:active_municipality, active_municipality)
+     |> assign(:date_start, new_start_date)
+     |> assign(:date_end, new_end_date)}
   end
 
   def handle_event("forward", _params, socket) do
-    new_groundwater_level = trunc(:rand.uniform() * 100)
-
-    municipalities =
-      Enum.map(socket.assigns.municipalities, fn municipality ->
-        %{
-          municipality: municipality.municipality,
-          groundwater_levels: new_groundwater_level,
-        }
-      end)
-
-    new_groundwater_levels = maybe_add_value(socket.assigns.groundwater_levels ++ [new_groundwater_level])
+    new_start_date = Date.add(socket.assigns.date_start, 14)
+    new_end_date = Date.add(socket.assigns.date_end, 14)
+    
+    # Calculate new water levels for the active municipality
+    water_levels = DataManager.calculate_municipality_water_level(
+      socket.assigns.active_municipality.municipality,
+      new_start_date,
+      new_end_date
+    )
+    
+    # Update active municipality with new water levels
+    active_municipality = Map.put(socket.assigns.active_municipality, :groundwater_levels, water_levels)
 
     {:noreply,
      socket
-     |> assign(:groundwater_levels, new_groundwater_levels)
-     |> assign(:municipalities, municipalities)
-     |> assign(:date_start, Datex.Date.add(socket.assigns.date_start, 14))
-     |> assign(:date_end, Datex.Date.add(socket.assigns.date_end, 14))}
+     |> assign(:active_municipality, active_municipality)
+     |> assign(:date_start, new_start_date)
+     |> assign(:date_end, new_end_date)}
+  end
+
+  def handle_event("select_municipality", %{"municipality" => municipality}, socket) do
+    # Calculate water levels for the selected municipality
+    water_levels = DataManager.calculate_municipality_water_level(
+      municipality,
+      socket.assigns.date_start,
+      socket.assigns.date_end
+    )
+    
+    # Find the municipality in the list and update its water levels
+    active_municipality = 
+      Enum.find(socket.assigns.municipalities, fn m -> 
+        m.municipality == municipality
+      end)
+      |> Map.put(:groundwater_levels, water_levels)
+
+    {:noreply,
+     socket
+     |> assign(:active_municipality, active_municipality)}
   end
 
   def render(assigns) do
@@ -71,15 +101,13 @@ defmodule AlggroundWeb.LiveHomePage do
               Give Feedback
             </.link>
           </div>
+
           <div class="flex justify-evenly h-8">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" phx-click="backward">
               <path d="M9.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.2 288 416 288c17.7 0 32-14.3 32-32s-14.3-32-32-32l-306.7 0L214.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z" />
             </svg>
             <p class="mx-auto max-w-lg text-pretty text-center font-medium tracking-tight text-gray-400 text-3xl">
-              <%= Datex.Date.format_date(@date_start, "DD/MM/YYYY") %> to <%= Datex.Date.format_date(
-                @date_end,
-                "DD/MM/YYYY"
-              ) %>
+              <%= Date.to_string(@date_start) %> to <%= Date.to_string(@date_end) %>
             </p>
 
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" phx-click="forward">
@@ -87,10 +115,10 @@ defmodule AlggroundWeb.LiveHomePage do
             </svg>
           </div>
           <p class="mx-auto max-w-lg text-pretty text-center font-medium tracking-tight text-gray-950 text-3xl lg:mt-4 mt-10">
-            in <%= get_municipality(@municipalities, "Albufeira").municipality %>
+            in <%= @active_municipality.municipality %>
           </p>
           <p class="mx-auto max-w-lg text-pretty text-center text-4xl font-medium tracking-tight sm:text-3xl ">
-            <%= display_groundwater(get_municipality(@municipalities, "Albufeira")) %>
+            <%= display_groundwater(@active_municipality) %>
           </p>
           <div class="flex justify-left ">
             <p class="flex gap-2 mx-auto text-pretty font-sm tracking-tight text-gray-400 text-sm cursor-pointer">
@@ -105,12 +133,11 @@ defmodule AlggroundWeb.LiveHomePage do
               </svg>
             </p>
           </div>
+
           <div class="mt-10 grid gap-4 sm:mt-4 lg:rounded-t-[2rem]">
             <div class="relative mb-4">
               <div class="relative flex h-full flex-col overflow-hidden rounded-[calc(2rem+1px)]">
                 <.modal id="frame_groundwater"></.modal>
-                <.modal id="frame_rainfall"></.modal>
-                <.modal id="frame_reservoir"></.modal>
               </div>
               <div class="pointer-events-none absolute inset-px rounded-lg shadow ring-1 ring-black/5 max-lg:rounded-t-[2rem]">
               </div>
@@ -137,11 +164,11 @@ defmodule AlggroundWeb.LiveHomePage do
             <div class="relative flex h-full flex-col overflow-hidden rounded-[calc(theme(borderRadius.lg)+1px)] lg:rounded-l-[calc(2rem+1px)]">
               <div class="px-8 pb-3 pt-8 sm:px-10 sm:pb-0 sm:pt-10">
                 <%= for municipality <- @municipalities do %>
-                  <.live_component
-                    module={AlggroundWeb.Components.Region}
-                    region={municipality}
-                    id={municipality.municipality <> "#{System.unique_integer()}"}
-                  />
+                    <.live_component
+                      module={AlggroundWeb.Components.Region}
+                      region={municipality}
+                      id={municipality.municipality <> "#{System.unique_integer()}"}
+                    />
                 <% end %>
               </div>
             </div>
