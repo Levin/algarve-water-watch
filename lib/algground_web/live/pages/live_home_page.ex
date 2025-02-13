@@ -13,10 +13,10 @@ defmodule AlggroundWeb.LiveHomePage do
     
     # Load historical data for the graph
     historical_measurements = 
-      -360..0  # Get last year of data in 90-day intervals
+      0..-360  # Get last year of data in 90-day intervals, reversed range
       |> Enum.take_every(90)
       |> Enum.map(fn days_offset ->
-        date_start = Date.add(start_date, days_offset)
+        date_start = Date.add(end_date, days_offset)
         date_end = Date.add(date_start, 90)
         DataManager.calculate_municipality_water_level(
           active_municipality.municipality,
@@ -25,7 +25,6 @@ defmodule AlggroundWeb.LiveHomePage do
         )
       end)
       |> Enum.reject(&is_nil/1)  # Remove any nil measurements
-      |> Enum.reverse()
     
     # Get water levels and percentiles for the active municipality
     water_levels = DataManager.calculate_municipality_water_level(
@@ -62,10 +61,10 @@ defmodule AlggroundWeb.LiveHomePage do
     
     # Load historical data for the graph
     historical_measurements = 
-      -360..0  # Get last year of data in 90-day intervals
+      0..-360  # Get last year of data in 90-day intervals, reversed range
       |> Enum.take_every(90)
       |> Enum.map(fn days_offset ->
-        date_start = Date.add(new_start_date, days_offset)
+        date_start = Date.add(new_end_date, days_offset)
         date_end = Date.add(date_start, 90)
         DataManager.calculate_municipality_water_level(
           socket.assigns.active_municipality.municipality,
@@ -74,7 +73,6 @@ defmodule AlggroundWeb.LiveHomePage do
         )
       end)
       |> Enum.reject(&is_nil/1)  # Remove any nil measurements
-      |> Enum.reverse()
     
     # Calculate new water levels for the active municipality
     water_levels = DataManager.calculate_municipality_water_level(
@@ -103,10 +101,10 @@ defmodule AlggroundWeb.LiveHomePage do
       
       # Load historical data for the graph
       historical_measurements = 
-        -360..0  # Get last year of data in 90-day intervals
+        0..-360  # Get last year of data in 90-day intervals, reversed range
         |> Enum.take_every(90)
         |> Enum.map(fn days_offset ->
-          date_start = Date.add(new_start_date, days_offset)
+          date_start = Date.add(new_end_date, days_offset)
           date_end = Date.add(date_start, 90)
           DataManager.calculate_municipality_water_level(
             socket.assigns.active_municipality.municipality,
@@ -115,7 +113,6 @@ defmodule AlggroundWeb.LiveHomePage do
           )
         end)
         |> Enum.reject(&is_nil/1)  # Remove any nil measurements
-        |> Enum.reverse()
       
       # Calculate new water levels for the active municipality
       water_levels = DataManager.calculate_municipality_water_level(
@@ -146,10 +143,10 @@ defmodule AlggroundWeb.LiveHomePage do
     
     # Load historical data for the graph
     historical_measurements = 
-      -360..0  # Get last year of data in 90-day intervals
+      0..-360  # Get last year of data in 90-day intervals, reversed range
       |> Enum.take_every(90)
       |> Enum.map(fn days_offset ->
-        date_start = Date.add(start_date, days_offset)
+        date_start = Date.add(end_date, days_offset)
         date_end = Date.add(date_start, 90)
         DataManager.calculate_municipality_water_level(
           municipality,
@@ -158,7 +155,6 @@ defmodule AlggroundWeb.LiveHomePage do
         )
       end)
       |> Enum.reject(&is_nil/1)  # Remove any nil measurements
-      |> Enum.reverse()
     
     # Get current water levels and percentiles
     water_levels = DataManager.calculate_municipality_water_level(
@@ -231,54 +227,33 @@ defmodule AlggroundWeb.LiveHomePage do
           </p>
           <%= display_groundwater(assigns) %>
           <%= if @active_municipality.measurements && length(@active_municipality.measurements) > 1 do %>
-            <div class="mt-4 px-10">
+            <div class="mt-4 px-4 w-full overflow-x-auto">
               <%= draw_groundwater(%{groundwater_levels: @active_municipality.measurements}, 700) %>
             </div>
           <% end %>
-          <div class="flex justify-left ">
-            <p class="flex gap-2 mx-auto text-pretty font-sm tracking-tight text-gray-400 text-sm cursor-pointer">
+          <div class="flex justify-center px-4">
+            <p class="text-md font-medium tracking-tight text-gray-400 max-lg:text-center">
               Ground Water Level
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 320 512"
-                class="h-6 w-6 left-2.5 top-2 border rounded-full bg-gray-200 p-1"
-                phx-click={show_modal("groundwater-info")}
-              >
-                <path d="M80 160c0-35.3 28.7-64 64-64l32 0c35.3 0 64 28.7 64 64l0 3.6c0 21.8-11.1 42.1-29.4 53.8l-42.2 27.1c-25.2 16.2-40.4 44.1-40.4 74l0 1.4c0 17.7 14.3 32 32 32s32-14.3 32-32l0-1.4c0-8.2 4.2-15.8 11-20.2l42.2-27.1c36.6-23.6 58.8-64.1 58.8-107.7l0-3.6c0-70.7-57.3-128-128-128l-32 0C73.3 32 16 89.3 16 160c0 17.7 14.3 32 32 32s32-14.3 32-32zm80 320a40 40 0 1 0 0-80 40 40 0 1 0 0 80z" />
-              </svg>
             </p>
           </div>
 
-          <.modal id="groundwater-info">
-            <div class="mt-2 text-sm leading-6 text-zinc-600">
-              <h3 class="text-lg font-semibold mb-2">Understanding Groundwater in the Algarve</h3>
-              
-              <h4 class="font-semibold mt-4 mb-1">Why Groundwater Matters</h4>
-              <p class="mb-2">Groundwater is crucial for the Algarve region for several reasons:</p>
-              <ul class="list-disc pl-5 space-y-1 mb-4">
-                <li>It's a vital water source during dry seasons and droughts</li>
-                <li>Supports agriculture and tourism, the region's main economic activities</li>
-                <li>Helps maintain natural ecosystems and prevents saltwater intrusion</li>
-                <li>Acts as a buffer during periods of low rainfall</li>
-              </ul>
-
-              <h4 class="font-semibold mt-4 mb-1">Our Data</h4>
-              <p class="mb-2">We collect data from the Portuguese Water Resources Information System (SNIRH):</p>
-              <ul class="list-disc pl-5 space-y-1 mb-4">
-                <li>Historical data spanning multiple decades</li>
-                <li>Coverage of all major aquifers in the region</li>
-              </ul>
-
-              <h4 class="font-semibold mt-4 mb-1">Understanding the Measurements</h4>
-              <ul class="list-disc pl-5 space-y-1">
-                <li>Values show the depth of water below ground level</li>
-                <li>Lower numbers mean higher water levels (better)</li>
-                <li>We compare current levels with historical data to assess the situation</li>
-                <li>Data is averaged over 90-day periods to show clear trends</li>
-              </ul>
+          <div class="mb-4"></div>
+          <div class="relative">
+            <div class="absolute inset-px rounded-lg bg-white lg:rounded-l-[2rem]"></div>
+            <div class="relative flex h-full flex-col overflow-hidden rounded-[calc(theme(borderRadius.lg)+1px)] lg:rounded-l-[calc(2rem+1px)]">
+              <div class="px-8 pb-3 pt-8 sm:px-10 sm:pb-0 sm:pt-10">
+                <%= for municipality <- @municipalities do %>
+                    <.live_component
+                      module={AlggroundWeb.Components.Region}
+                      region={municipality}
+                      id={municipality.municipality <> "#{System.unique_integer()}"}
+                    />
+                <% end %>
+              </div>
             </div>
-          </.modal>
-
+            <div class="pointer-events-none absolute inset-px rounded-lg shadow ring-1 ring-black/5 lg:rounded-l-[2rem]">
+            </div>
+          </div>
           <div class="mt-10 grid gap-4 sm:mt-4 lg:rounded-t-[2rem]">
             <div class="relative mb-4">
               <div class="relative flex h-full flex-col overflow-hidden rounded-[calc(2rem+1px)]">
@@ -309,30 +284,6 @@ defmodule AlggroundWeb.LiveHomePage do
             <div class="rounded-sm bg-white lg:rounded-t-[2rem] px-8 pt-4 contain block md:hidden">
               <%= draw_groundwater(%{groundwater_levels: @active_municipality.measurements}, 280) %>
             </div>
-
-          <div class="flex justify-center px-4">
-            <p class="text-md font-medium tracking-tight text-gray-400 max-lg:text-center">
-              Ground Water Level
-            </p>
-          </div>
-
-          <div class="mb-4"></div>
-          <div class="relative">
-            <div class="absolute inset-px rounded-lg bg-white lg:rounded-l-[2rem]"></div>
-            <div class="relative flex h-full flex-col overflow-hidden rounded-[calc(theme(borderRadius.lg)+1px)] lg:rounded-l-[calc(2rem+1px)]">
-              <div class="px-8 pb-3 pt-8 sm:px-10 sm:pb-0 sm:pt-10">
-                <%= for municipality <- @municipalities do %>
-                    <.live_component
-                      module={AlggroundWeb.Components.Region}
-                      region={municipality}
-                      id={municipality.municipality <> "#{System.unique_integer()}"}
-                    />
-                <% end %>
-              </div>
-            </div>
-            <div class="pointer-events-none absolute inset-px rounded-lg shadow ring-1 ring-black/5 lg:rounded-l-[2rem]">
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -341,7 +292,7 @@ defmodule AlggroundWeb.LiveHomePage do
 
   defp draw_groundwater(%{groundwater_levels: levels}, width) when is_list(levels) and length(levels) > 0 do
     graph = Contex.Sparkline.new(levels)
-    Contex.Sparkline.draw(%{graph | height: 100, width: width})
+    Contex.Sparkline.draw(%{graph | height: 300, width: width})
   end
 
   defp draw_groundwater(_assigns, _width) do
@@ -352,7 +303,6 @@ defmodule AlggroundWeb.LiveHomePage do
     </div>
     """
   end
-
 
   defp display_groundwater(assigns) do
     case assigns.active_municipality do
