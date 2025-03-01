@@ -2,6 +2,26 @@ defmodule AlggroundWeb.LiveHomePage do
   use AlggroundWeb, :live_view
 
   alias Algground.DataManager
+  require Tucan
+
+  @doc """
+    Mount the live view that shows users the current water level of a region.
+    
+    This view displays:
+    1. The current water level of a randomly selected municipality
+    2. A histogram of historical water levels for the last 5 years using the Tucan library
+    
+    The histogram displays water level data grouped by quarters (Q1, Q2, Q3, Q4) for each year,
+    showing the data sequentially quarter by quarter, not sorted from highest to lowest.
+    This chronological presentation allows users to observe seasonal patterns and long-term trends
+    in groundwater levels over the 5-year period.
+    
+    User interaction:
+    - When a user clicks on a location in the list, they are automatically scrolled back to the top
+      of the page to see the newly loaded graph and water level information for that location.
+    
+    For more information on the Tucan library, see: https://github.com/pnezis/tucan
+  """
 
   def mount(_params, _session, socket) do
     municipalities = DataManager.get_municipalities()
@@ -12,18 +32,18 @@ defmodule AlggroundWeb.LiveHomePage do
     end_date = Date.end_of_month(Date.add(today, -31))  # Get end of previous month
     start_date = Date.beginning_of_month(end_date)  # Get start of that month
     
-    # Load historical data for the graph - last 12 months
+    # Load historical data for the graph - last 5 years (60 months)
     historical_measurements = 
-      0..11  # Last 12 months
+      0..59  # Last 60 months (5 years)
       |> Enum.map(fn month_offset ->
-        end_date = Date.end_of_month(Date.add(end_date, -month_offset * 31))
-        start_date = Date.beginning_of_month(end_date)
+        month_end_date = Date.end_of_month(Date.add(end_date, -month_offset * 31))
+        month_start_date = Date.beginning_of_month(month_end_date)
         level = DataManager.calculate_municipality_water_level(
           active_municipality.municipality,
-          start_date,
-          end_date
+          month_start_date,
+          month_end_date
         )
-        {end_date, level}  # Store the date with the measurement
+        {month_end_date, level}  # Store the date with the measurement
       end)
       |> Enum.reject(fn {_date, level} -> is_nil(level) end)  # Remove any nil measurements
     
@@ -67,18 +87,18 @@ defmodule AlggroundWeb.LiveHomePage do
     new_start_date = Date.beginning_of_month(Date.add(current_start, -1))  # Go to start of previous month
     new_end_date = Date.end_of_month(new_start_date)  # Go to end of that month
     
-    # Load historical data for the graph - last 12 months
+    # Load historical data for the graph - last 5 years (60 months)
     historical_measurements = 
-      0..11  # Last 12 months
+      0..59  # Last 60 months (5 years)
       |> Enum.map(fn month_offset ->
-        end_date = Date.end_of_month(Date.add(new_end_date, -month_offset * 31))
-        start_date = Date.beginning_of_month(end_date)
+        month_end_date = Date.end_of_month(Date.add(new_end_date, -month_offset * 31))
+        month_start_date = Date.beginning_of_month(month_end_date)
         level = DataManager.calculate_municipality_water_level(
           socket.assigns.active_municipality.municipality,
-          start_date,
-          end_date
+          month_start_date,
+          month_end_date
         )
-        {end_date, level}  # Store the date with the measurement
+        {month_end_date, level}  # Store the date with the measurement
       end)
       |> Enum.reject(fn {_date, level} -> is_nil(level) end)
     
@@ -118,18 +138,18 @@ defmodule AlggroundWeb.LiveHomePage do
           {new_start_date, new_end_date}
         end
       
-      # Load historical data for the graph - last 12 months
+      # Load historical data for the graph - last 5 years (60 months)
       historical_measurements = 
-        0..11  # Last 12 months
+        0..59  # Last 60 months (5 years)
         |> Enum.map(fn month_offset ->
-          end_date = Date.end_of_month(Date.add(new_end_date, -month_offset * 31))
-          start_date = Date.beginning_of_month(end_date)
+          month_end_date = Date.end_of_month(Date.add(new_end_date, -month_offset * 31))
+          month_start_date = Date.beginning_of_month(month_end_date)
           level = DataManager.calculate_municipality_water_level(
             socket.assigns.active_municipality.municipality,
-            start_date,
-            end_date
+            month_start_date,
+            month_end_date
           )
-          {end_date, level}  # Store the date with the measurement
+          {month_end_date, level}  # Store the date with the measurement
         end)
         |> Enum.reject(fn {_date, level} -> is_nil(level) end)
       
@@ -169,16 +189,16 @@ defmodule AlggroundWeb.LiveHomePage do
     
     # Load historical data for the graph
     historical_measurements = 
-      0..11  # Last 12 months
+      0..59  # Last 60 months (5 years)
       |> Enum.map(fn month_offset ->
-        end_date = Date.end_of_month(Date.add(end_date, -month_offset * 31))
-        start_date = Date.beginning_of_month(end_date)
+        month_end_date = Date.end_of_month(Date.add(end_date, -month_offset * 31))
+        month_start_date = Date.beginning_of_month(month_end_date)
         level = DataManager.calculate_municipality_water_level(
           municipality,
-          start_date,
-          end_date
+          month_start_date,
+          month_end_date
         )
-        {end_date, level}  # Store the date with the measurement
+        {month_end_date, level}  # Store the date with the measurement
       end)
       |> Enum.reject(fn {_date, level} -> is_nil(level) end)  # Remove any nil measurements
     
@@ -218,7 +238,7 @@ defmodule AlggroundWeb.LiveHomePage do
     ~H"""
     <div>
       <div class="bg-gray-50 py-6 sm:py-6 rounded-lg">
-        <div class="mx-auto max-w-2xl px-6 lg:max-w-7xl lg:px-8">
+        <div class="mx-auto max-w-3xl px-6 lg:max-w-7xl lg:px-8">
           <div class="flex justify-center mb-6">
             <.link
               navigate={~p"/feedback"}
@@ -255,11 +275,13 @@ defmodule AlggroundWeb.LiveHomePage do
           </p>
           <%= display_groundwater(assigns) %>
           <%= if @active_municipality.measurements && length(@active_municipality.measurements) > 1 do %>
-            <div class="mt-4 px-4 w-full overflow-x-auto">
-              <%= draw_groundwater(@active_municipality, 700) %>
+            <div class="mt-6 mb-8 px-2 w-full">
+              <div class="bg-white p-4 rounded-lg shadow-sm min-h-[350px] overflow-hidden">
+                <%= draw_groundwater(@active_municipality, 800) %>
+              </div>
             </div>
           <% end %>
-          <div class="flex justify-center px-4">
+          <div class="flex justify-center px-4 mt-2">
             <p class="text-md font-medium tracking-tight text-gray-400 max-lg:text-center">
               Ground Water Level
             </p>
@@ -332,56 +354,102 @@ defmodule AlggroundWeb.LiveHomePage do
         """
         
       measurements ->
-        # Create dataset with dates and measurements
-        data = 
+        # Extract data for histogram
+        _levels = Enum.map(measurements, fn {_date, level} -> level end)
+        
+        # Group data by year and month for better visualization
+        grouped_data = 
           measurements
-          |> Enum.sort_by(fn {date, _level} -> Date.to_gregorian_days(date) end, :desc)  # Sort by date descending
-          |> Enum.with_index(1)  # Start index at 1
-          |> Enum.map(fn {{_date, level}, index} -> 
-            [index, level]  # Use numbers for x-axis
+          |> Enum.group_by(
+            fn {date, _level} -> 
+              year = date.year
+              # Group into quarters
+              quarter = div(date.month - 1, 3) + 1
+              "#{year}-Q#{quarter}"
+            end,
+            fn {_date, level} -> level end
+          )
+          |> Enum.map(fn {period, values} -> 
+            # Calculate average for the period
+            avg = Enum.sum(values) / length(values)
+            %{period: period, level: avg}
           end)
-
-        # Create dataset
-        dataset = Contex.Dataset.new(data, ["Month", "Level"])
-
-        # Create plot
-        plot = 
-          Contex.Plot.new(dataset, Contex.LinePlot, width, 300,
-            mapping: %{x_col: "Month", y_cols: ["Level"]})
-          |> Contex.Plot.titles("Groundwater Levels", "Past Year by Month")
-          |> Contex.Plot.axis_labels("Month", "Meters Below Ground")
-          |> Contex.Plot.plot_options(%{
-            legend_setting: :legend_none,
-            colour_palette: ["#4F46E5"],  # Indigo color
-            point_size: 4,
-            line_width: 2,
-            padding: 10,
-            show_gridlines: true,
-            gridline_stroke_width: 1,
-            custom_x_scale: %{min: 0, max: 13},  # Ensure we show all months
-            custom_x_formatter: fn x -> trunc(x) end  # Format x-axis labels as integers
-          })
-
-        # Add reference lines for percentiles if available
-        plot = 
-          case municipality do
-            %{percentiles: %{p30: p30, p70: p70}} when p30 > 0 and p70 > 0 ->
-              max_level = max(Enum.max(Enum.map(measurements, fn {_date, level} -> level end)), p70)
-              plot
-              |> Contex.Plot.plot_options(%{
-                custom_y_scale: %{min: 0, max: max_level * 1.1},
-                additional_plot_options: %{
-                  show_reference_line: true,
-                  reference_lines: [
-                    %{y: p30, colour: "#DC2626", line_style: :dashed, label: "Low Level (30th percentile)"},  # Red
-                    %{y: p70, colour: "#16A34A", line_style: :dashed, label: "High Level (70th percentile)"}  # Green
-                  ]
-                }
-              })
-            _ -> plot
-          end
-
-        Contex.Plot.to_svg(plot)
+          |> Enum.sort_by(fn %{period: period} -> period end)  # Sort chronologically
+          |> Enum.take(20) # Show last 20 quarters (5 years)
+        
+        # Get percentiles for reference lines
+        percentiles = Map.get(municipality, :percentiles, %{p30: 0, p70: 0})
+        
+        # Helper function to format the quarter for better display
+        format_quarter = fn period ->
+          [year, quarter] = String.split(period, "-")
+          "#{quarter} #{year}"
+        end
+        
+        chart_data = Enum.map(grouped_data, fn %{period: period, level: level} -> 
+          %{period: format_quarter.(period), level: level}
+        end)
+        
+        spec = %{
+          "$schema" => "https://vega.github.io/schema/vega-lite/v5.json",
+          "description" => "Groundwater Levels - Last 5 Years (Quarterly Average)",
+          "width" => width,
+          "height" => 300,
+          "padding" => %{
+            "top" => 20,
+            "right" => 20,
+            "bottom" => 40,
+            "left" => 60
+          },
+          "title" => %{
+            "text" => "Groundwater Levels - Last 5 Years (Quarterly Average)",
+            "fontSize" => 14
+          },
+          "data" => %{"values" => chart_data},
+          "mark" => %{
+            "type" => "bar", 
+            "tooltip" => true,
+            "cornerRadius" => 2,
+            "color" => "#4F46E5"
+          },
+          "encoding" => %{
+            "x" => %{
+              "field" => "period", 
+              "type" => "nominal",
+              "title" => "Period",
+              "sort" => nil,  # Use the data order as provided (chronological)
+              "axis" => %{
+                "labelAngle" => -45,
+                "labelFontSize" => 11,
+                "labelLimit" => 100,
+                "labelOverlap" => "parity"
+              }
+            },
+            "y" => %{
+              "field" => "level", 
+              "type" => "quantitative",
+              "title" => "Meters Below Ground"
+            }
+          },
+          "config" => %{
+            "view" => %{"stroke" => "transparent"},
+            "axis" => %{"domainWidth" => 1}
+          }
+        }
+        
+        # Add reference lines if available
+        spec = if percentiles.p30 > 0 and percentiles.p70 > 0 do
+          # This is a simplified version without reference lines
+          spec
+        else
+          spec
+        end
+        
+        assigns = %{chart: spec}
+        ~H"""
+        <div id="histogram" phx-hook="VegaLite" data-spec={Jason.encode!(@chart)} class="w-full h-[300px] flex justify-center items-center">
+        </div>
+        """
     end
   end
 

@@ -22,10 +22,56 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 
+// Define hooks
+const Hooks = {}
+
+// VegaLite hook for rendering charts
+Hooks.VegaLite = {
+  mounted() {
+    this.renderChart();
+    // Add resize listener for responsiveness
+    window.addEventListener('resize', this.handleResize.bind(this));
+  },
+  updated() {
+    this.renderChart();
+  },
+  destroyed() {
+    // Clean up resize listener
+    window.removeEventListener('resize', this.handleResize.bind(this));
+  },
+  handleResize() {
+    // Debounce the resize event
+    clearTimeout(this.resizeTimer);
+    this.resizeTimer = setTimeout(() => this.renderChart(), 250);
+  },
+  renderChart() {
+    try {
+      const spec = JSON.parse(this.el.dataset.spec);
+      console.log("Rendering chart with spec:", spec);
+      
+      // We need to load vegaEmbed from a CDN since we're not using npm
+      if (window.vegaEmbed) {
+        window.vegaEmbed(this.el, spec, {
+          actions: false,
+          renderer: 'svg',
+          width: 'container'
+        }).catch(error => {
+          console.error("Error rendering chart:", error);
+        });
+      } else {
+        console.error("vegaEmbed is not available. Make sure to include the Vega-Lite library.");
+      }
+    } catch (error) {
+      console.error("Error parsing chart spec:", error);
+    }
+  }
+}
+
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 let liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
-  params: {_csrf_token: csrfToken}
+  params: {_csrf_token: csrfToken},
+  hooks: Hooks
 })
 
 // Show progress bar on live navigation and form submits
@@ -41,4 +87,3 @@ liveSocket.connect()
 // >> liveSocket.enableLatencySim(1000)  // enabled for duration of browser session
 // >> liveSocket.disableLatencySim()
 window.liveSocket = liveSocket
-
