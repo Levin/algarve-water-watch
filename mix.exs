@@ -68,7 +68,8 @@ defmodule Algground.MixProject do
        depth: 1},
       {:bandit, "~> 1.5"},
       {:datex, "~> 1.0"},
-      {:contex, "~> 0.5.0"}
+      {:contex, "~> 0.5.0"},
+      {:tucan, "~> 0.4.1"}
     ]
   end
 

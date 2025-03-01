@@ -18,7 +18,6 @@ defmodule Algground.DataManager do
   end
 
   def calculate_municipality_water_level(municipality, start_date, end_date) do
-    dbg()
     GenServer.call(__MODULE__, {:calculate_water_levels, municipality, start_date, end_date})
   end
 
