@@ -52,21 +52,21 @@ defmodule AlggroundWeb.Components.Region do
       assigns.region.groundwater_levels >= 150 ->
         ~H"""
         <p class="mt-2 max-w-lg text-lg/6 text-green-600 max-lg:text-center">
-          <%= @region.groundwater_levels %>m
+          <%= @region.groundwater_levels %>cm
         </p>
         """
 
       assigns.region.groundwater_levels < 150 and assigns.region.groundwater_levels >= 50 ->
         ~H"""
         <p class="mt-2 max-w-lg text-lg/6 text-amber-500 max-lg:text-center">
-          <%= @region.groundwater_levels %>m
+          <%= @region.groundwater_levels %>cm
         </p>
         """
 
       assigns.region.groundwater_levels < 50 ->
         ~H"""
         <p class="mt-2 max-w-lg text-lg/6 text-red-600 max-lg:text-center">
-          <%= @region.groundwater_levels %>m
+          <%= @region.groundwater_levels %>cm
         </p>
         """
     end

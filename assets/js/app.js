@@ -25,6 +25,43 @@ import topbar from "../vendor/topbar"
 // Define hooks
 const Hooks = {}
 
+// Hook for handling scroll to top
+Hooks.ScrollHandler = {
+  mounted() {
+    this.handleEvent("scroll_to_top", ({ id }) => {
+      const element = document.getElementById(id);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  }
+}
+
+// ContainerWidth hook for measuring container width
+Hooks.ContainerWidth = {
+  mounted() {
+    this.updateContainerWidth();
+    // Add resize listener for responsiveness
+    window.addEventListener('resize', this.handleResize.bind(this));
+  },
+  destroyed() {
+    // Clean up resize listener
+    window.removeEventListener('resize', this.handleResize.bind(this));
+  },
+  handleResize() {
+    // Debounce the resize event
+    clearTimeout(this.resizeTimer);
+    this.resizeTimer = setTimeout(() => this.updateContainerWidth(), 250);
+  },
+  updateContainerWidth() {
+    // Get the container width and push to the server
+    const width = this.el.clientWidth;
+    if (width > 0) {
+      this.pushEvent("update_container_width", { width });
+    }
+  }
+}
+
 // VegaLite hook for rendering charts
 Hooks.VegaLite = {
   mounted() {

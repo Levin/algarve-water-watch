@@ -8,7 +8,7 @@ defmodule AlggroundWeb.LiveHomePage do
     Mount the live view that shows users the current water level of a region.
     
     This view displays:
-    1. The current water level of a randomly selected municipality
+    1. The current water level of a randomly selected municipality (in cm)
     2. A histogram of historical water levels for the last 5 years using the Tucan library
     
     The histogram displays water level data grouped by quarters (Q1, Q2, Q3, Q4) for each year,
@@ -18,8 +18,11 @@ defmodule AlggroundWeb.LiveHomePage do
     
     User interaction:
     - When a user clicks on a location in the list, they are automatically scrolled back to the top
-      of the page to see the newly loaded graph and water level information for that location.
+      of the page to see the newly loaded graph and water level information for that location. we use an id for that and send the user to the id of a div at the top of the page.
+
+    in order for users to see the graph from the beginning on completely, the graph should have a reasonable size. users (except on phones) should not need to scroll and to see the complete informtaion of the graph.
     
+
     For more information on the Tucan library, see: https://github.com/pnezis/tucan
   """
 
@@ -77,7 +80,7 @@ defmodule AlggroundWeb.LiveHomePage do
      |> assign(:date_start, start_date)
      |> assign(:date_end, end_date)
      |> assign(:municipalities, municipalities)
-     |> assign(:container_width, nil)
+     |> assign(:container_width, 800)  # Default width, will be updated by JS hook
      |> assign(:live_action, :index)}
   end
 
@@ -183,6 +186,11 @@ defmodule AlggroundWeb.LiveHomePage do
     end
   end
 
+  def handle_event("update_container_width", %{"width" => width}, socket) do
+    # Update the container width in the socket assigns
+    {:noreply, assign(socket, :container_width, width)}
+  end
+
   def handle_event("select_municipality", %{"municipality" => municipality}, socket) do
     start_date = socket.assigns.date_start
     end_date = socket.assigns.date_end
@@ -218,9 +226,13 @@ defmodule AlggroundWeb.LiveHomePage do
       |> Map.put(:percentiles, percentiles)
       |> Map.put(:measurements, historical_measurements)
     
-    {:noreply,
-     socket
-     |> assign(:active_municipality, active_municipality)}
+    # Send a push event to scroll to the top of the page
+    socket = 
+      socket
+      |> assign(:active_municipality, active_municipality)
+      |> push_event("scroll_to_top", %{id: "top-graph-section"})
+    
+    {:noreply, socket}
   end
 
 
@@ -236,7 +248,7 @@ defmodule AlggroundWeb.LiveHomePage do
 
   def render(assigns) do
     ~H"""
-    <div>
+    <div id="main-view" phx-hook="ScrollHandler">
       <div class="bg-gray-50 py-6 sm:py-6 rounded-lg">
         <div class="mx-auto max-w-3xl px-6 lg:max-w-7xl lg:px-8">
           <div class="flex justify-center mb-6">
@@ -248,7 +260,7 @@ defmodule AlggroundWeb.LiveHomePage do
             </.link>
           </div>
 
-          <div class="flex justify-evenly h-8">
+          <div id="top-graph-section" class="flex justify-evenly h-8">
             <svg 
               xmlns="http://www.w3.org/2000/svg" 
               viewBox="0 0 448 512" 
@@ -276,8 +288,8 @@ defmodule AlggroundWeb.LiveHomePage do
           <%= display_groundwater(assigns) %>
           <%= if @active_municipality.measurements && length(@active_municipality.measurements) > 1 do %>
             <div class="mt-6 mb-8 px-2 w-full">
-              <div class="bg-white p-4 rounded-lg shadow-sm min-h-[350px] overflow-hidden">
-                <%= draw_groundwater(@active_municipality, 800) %>
+              <div id="chart-container" phx-hook="ContainerWidth" class="bg-white p-4 rounded-lg shadow-sm min-h-[350px] overflow-hidden">
+                <%= draw_groundwater(@active_municipality, @container_width) %>
               </div>
             </div>
           <% end %>
@@ -332,7 +344,7 @@ defmodule AlggroundWeb.LiveHomePage do
           </div>
 
             <div class="rounded-sm bg-white lg:rounded-t-[2rem] px-8 pt-4 contain block md:hidden">
-              <%= draw_groundwater(@active_municipality, 280) %>
+              <%= draw_groundwater(@active_municipality, @container_width) %>
             </div>
         </div>
       </div>
@@ -390,11 +402,18 @@ defmodule AlggroundWeb.LiveHomePage do
           %{period: format_quarter.(period), level: level}
         end)
         
+        # Calculate appropriate width based on container or default to provided width
+        effective_width = width || 800
+        
         spec = %{
           "$schema" => "https://vega.github.io/schema/vega-lite/v5.json",
           "description" => "Groundwater Levels - Last 5 Years (Quarterly Average)",
-          "width" => width,
+          "width" => "container",  # Use container width for responsiveness
           "height" => 300,
+          "autosize" => %{
+            "type" => "fit",
+            "contains" => "padding"
+          },
           "padding" => %{
             "top" => 20,
             "right" => 20,
@@ -428,7 +447,7 @@ defmodule AlggroundWeb.LiveHomePage do
             "y" => %{
               "field" => "level", 
               "type" => "quantitative",
-              "title" => "Meters Below Ground"
+              "title" => "Centimeters Below Ground"
             }
           },
           "config" => %{
@@ -476,7 +495,7 @@ defmodule AlggroundWeb.LiveHomePage do
           end)
           |> assign(:formatted_level, case levels do
             0.0 -> "Insufficient data"
-            level -> "#{Float.round(level, 2)} meters below ground"
+            level -> "#{Float.round(level * 100, 2)} centimeters below ground"
           end)
         
         ~H"""
