@@ -2,7 +2,7 @@ import Config
 
 # Configure your database
 config :algground, Algground.Repo,
-  username: "postgres",
+  username: "lein",
   password: "postgres",
   hostname: "localhost",
   database: "algground_dev",

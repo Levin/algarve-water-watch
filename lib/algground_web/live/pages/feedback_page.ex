@@ -1,12 +1,44 @@
 defmodule AlggroundWeb.FeedbackPage do
   use AlggroundWeb, :live_view
 
+  @doc """
+    in this liveview, we want to gather feedback by our users.
+    in order to do that, we give them a feedback form which is hold by this liveview.
+    we want to give the user a very nice experience filling out the form, so we follow the latest ux choices by leading companies.
+    the fields we want the user to fill out are:
+      - email: which is the email of the user, :email  
+      - missing_metrics: which is a comma separated list of metrics we do not have data for, :textarea
+      - best_feature: which is the feature we believe is the best, :textarea
+      - missing_feature: which is a description of the feature we believe is the best which we do not have data for, :textarea
+      - location_missing: which is yes if the location of the feature we believe is the best we do not have data for, :textarea
+      - location_missing_details: which is the description of the location where we do not have data for the best feature, :textarea
+      - map_essential: which is yes if the map is essential to understand the feature we believe is the best, :textarea
+      - map_essential_details: which is the description of the map that is essential to understand the feature we believe is the best, :textarea
+
+    the user does not need to fill out all the items in the form. at least we require these options:
+      - missing_metrics: which is a comma separated list of metrics we do not have data for
+      - missing_feature: which is a description of the feature we believe is the best which we do not have data for
+      - location_missing: which is yes if the location of the feature we believe is the best we do not have data for
+    
+    in order to make sure that these fields are filled out in a fast and easy way, we place them at the beginning and group them together.
+    we also validate each field
+
+    the mount function should account for all these values and also hold the error that gets updated in case we are missing a required item.
+    the users email should be places atop but is optional for them to give to us.
+    the validate function will not validate instantly but only when the user hits the submit button OR when there where 5 seconds of no changes to the form. then we call the validate function.
+
+    In order to save the feedback, we safe the answers to the questions in a csv file. the headers of that file should be in the according order that we ask the questions.
+
+    also in case users want to go back to the homepage, we navigate to that page. give them a arrow back in the top left corner that links to the homepage.
+
+  """
   def mount(_params, _session, socket) do
     {:ok,
      socket
      |> assign(
        :form,
        to_form(%{
+         "email" => "",
          "missing_metrics" => "",
          "best_feature" => "",
          "missing_feature" => "",
@@ -16,7 +48,8 @@ defmodule AlggroundWeb.FeedbackPage do
          "map_essential_details" => ""
        })
      )
-     |> assign(:errors, %{})}
+     |> assign(:errors, %{})
+     |> assign(:validation_timer, nil)}
   end
 
   def handle_event("save", %{"feedback" => feedback}, socket) do
@@ -35,6 +68,19 @@ defmodule AlggroundWeb.FeedbackPage do
          |> assign(:errors, errors)
          |> assign(:form, to_form(feedback))}
     end
+  end
+
+  def handle_event("form_changed", %{"feedback" => feedback}, socket) do
+    # Cancel any existing timer
+    if socket.assigns.validation_timer, do: Process.cancel_timer(socket.assigns.validation_timer)
+    
+    # Set a new timer for validation after 5 seconds
+    timer_ref = Process.send_after(self(), {:validate_form, feedback}, 5000)
+    
+    {:noreply,
+     socket
+     |> assign(:form, to_form(feedback))
+     |> assign(:validation_timer, timer_ref)}
   end
 
   def handle_event("validate", %{"feedback" => feedback}, socket) do
@@ -67,8 +113,31 @@ defmodule AlggroundWeb.FeedbackPage do
     {:noreply, assign(socket, :form, to_form(updated_data))}
   end
 
+  def handle_info({:validate_form, feedback}, socket) do
+    case validate_feedback(feedback) do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> assign(:errors, %{})
+         |> assign(:validation_timer, nil)}
+
+      {:error, errors} ->
+        {:noreply,
+         socket
+         |> assign(:errors, errors)
+         |> assign(:validation_timer, nil)}
+    end
+  end
+
   defp validate_feedback(feedback) do
     errors = %{}
+
+    errors =
+      if String.length(feedback["email"] || "") > 0 && !String.match?(feedback["email"], ~r/^[^\s]+@[^\s]+\.[^\s]+$/) do
+        Map.put(errors, :email, "Please provide a valid email address")
+      else
+        errors
+      end
 
     errors =
       if String.length(feedback["missing_metrics"] || "") < 3 do
@@ -126,6 +195,7 @@ defmodule AlggroundWeb.FeedbackPage do
     csv_path = "feedback_data.csv"
 
     headers = [
+      "Email",
       "Missing Metrics",
       "Best Feature",
       "Missing Feature",
@@ -136,6 +206,7 @@ defmodule AlggroundWeb.FeedbackPage do
     ]
 
     row_data = [
+      feedback["email"] || "",
       feedback["missing_metrics"] || "",
       feedback["best_feature"] || "",
       feedback["missing_feature"] || "",
@@ -186,10 +257,34 @@ defmodule AlggroundWeb.FeedbackPage do
 
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-2xl px-6 py-8">
-      <h2 class="text-2xl font-bold text-indigo-800 mb-8">Your Feedback Matters!</h2>
+    <div class="mx-auto max-w-2xl px-6 py-8 relative">
+      <div class="absolute top-2 left-2">
+        <a href="/" class="text-indigo-600 hover:text-indigo-800 flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          <span>Back to Home</span>
+        </a>
+      </div>
+      
+      <h2 class="text-2xl font-bold text-indigo-800 mb-8 mt-8">Your Feedback Matters!</h2>
 
-      <.form for={@form} phx-submit="save" phx-change="validate" class="space-y-6">
+      <.form for={@form} phx-submit="save" phx-change="form_changed" class="space-y-6">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Your Email (optional)
+          </label>
+          <input
+            type="email"
+            name="feedback[email]"
+            value={Phoenix.HTML.Form.input_value(@form, "email")}
+            class={"block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 #{if @errors[:email], do: "border-red-500"}"}
+          />
+          <%= if @errors[:email] do %>
+            <p class="mt-1 text-sm text-red-600"><%= @errors[:email] %></p>
+          <% end %>
+        </div>
+
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">
             Which metrics are missing?
