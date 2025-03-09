@@ -29,6 +29,9 @@ defmodule AlggroundWeb.LiveHomePage do
   def mount(_params, _session, socket) do
     municipalities = DataManager.get_municipalities()
     active_municipality = Enum.random(municipalities)
+    map_file = Path.join([Application.app_dir(:algground), "priv/data/us-10m.json"])
+    data_file = Path.join([Application.app_dir(:algground), "priv/data/unemployment.tsv"])
+    IO.inspect(map_file)
 
     # Start from the last complete month
     today = Date.utc_today()
@@ -73,6 +76,9 @@ defmodule AlggroundWeb.LiveHomePage do
       |> Map.put(:percentiles, percentiles)
       |> Map.put(:measurements, measurements)
 
+
+    ## load the Algarve map
+
     {:ok,
      socket
      |> assign(:groundwater_levels, Enum.map(municipalities, & &1.groundwater_levels))
@@ -81,7 +87,10 @@ defmodule AlggroundWeb.LiveHomePage do
      |> assign(:date_end, end_date)
      |> assign(:municipalities, municipalities)
      |> assign(:container_width, 800)  # Default width, will be updated by JS hook
-     |> assign(:live_action, :index)}
+     |> assign(:live_action, :index)
+     |> assign(:map_file, map_file)
+     |> assign(:data_file, data_file)
+    }
   end
 
   def handle_event("backward", _params, socket) do
@@ -295,10 +304,13 @@ defmodule AlggroundWeb.LiveHomePage do
           <% end %>
           <div class="flex justify-center px-4 mt-2">
             <p class="text-md font-medium tracking-tight text-gray-400 max-lg:text-center">
-              Ground Water Level
+              Ground Water Level MAP
             </p>
           </div>
-
+          <%!-- map --%>
+          <div id="chart-container" phx-hook="ContainerWidth" class="bg-white p-4 rounded-lg shadow-sm min-h-[350px] overflow-hidden">
+          <%= render_map(assigns) %>
+          </div>
           <div class="mb-4"></div>
           <div class="relative">
             <div class="absolute inset-px rounded-lg bg-white lg:rounded-l-[2rem]"></div>
@@ -403,7 +415,7 @@ defmodule AlggroundWeb.LiveHomePage do
         end)
 
         # Calculate appropriate width based on container or default to provided width
-        effective_width = width || 800
+        # effective_width = width || 800
 
         spec = %{
           "$schema" => "https://vega.github.io/schema/vega-lite/v5.json",
@@ -514,4 +526,62 @@ defmodule AlggroundWeb.LiveHomePage do
 
   defp get_municipality(municipalitys, municipality), do: List.first(Enum.filter(municipalitys, &(&1.municipality == municipality)))
 
+  defp render_map(assigns) do
+    IO.inspect(assigns.map_file)
+    spec = %{
+      "$schema" => "https://vega.github.io/schema/vega-lite/v5.json",
+      "description" => "Groundwater Levels - Last 5 Years (Quarterly Average)",
+      "width" => "container",  # Use container width for responsiveness
+      "height" => 300,
+      "autosize" => %{
+        "type" => "fit",
+        "contains" => "padding"
+      },
+      "padding" => %{
+        "top" => 20,
+        "right" => 20,
+        "bottom" => 40,
+        "left" => 60
+      },
+      "title" => %{
+        "text" => "Portugal's Districts",
+        "fontSize" => 14
+      },
+      "data" => %{
+        # "url" =>"https://raw.githubusercontent.com/vega/vega/refs/heads/main/docs/data/us-10m.json",
+        # "url" => "https://raw.githubusercontent.com/leakyMirror/map-of-europe/27a335110674ae5b01a84d3501b227e661beea2b/TopoJSON/europe.topojson",
+        "url" => "https://raw.githubusercontent.com/stcoimbra/PowerBI-TopoJson-Portugal/refs/heads/main/concelhos_portugal%20(1).json",
+        "format" => %{
+          "type" => "topojson",
+          "feature" => "concelhos_portugal"
+        }
+      },
+      "transform" => [%{
+        "lookup" => "id",
+        "from"=> %{
+          "data" => %{
+            "url"=> "https://raw.githubusercontent.com/vega/vega/refs/heads/main/docs/data/unemployment.tsv",
+          },
+          "key" => "id",
+          "fields" => ["rate"]
+        }
+      }],
+      "projection" => %{
+        "type" => "albersUsa"
+      },
+      "mark" => "geoshape",
+      "encoding" => %{
+        "color"=> %{
+          "field" => "rate",
+          "type" => "quantitative"
+        }
+      }
+    }
+
+    assigns = %{gis: spec}
+    ~H"""
+    <div id="gis-container" phx-hook="VegaLite" data-spec={Jason.encode!(@gis)} class="w-full h-[300px] flex justify-center items-center">
+    </div>
+    """
+  end
 end
