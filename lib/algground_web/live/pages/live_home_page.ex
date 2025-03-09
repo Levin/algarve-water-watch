@@ -29,9 +29,10 @@ defmodule AlggroundWeb.LiveHomePage do
   def mount(_params, _session, socket) do
     municipalities = DataManager.get_municipalities()
     active_municipality = Enum.random(municipalities)
+
+    # TODO: GIS Vega-=Lite dsplay from the local files does not work
     map_file = Path.join([Application.app_dir(:algground), "priv/data/us-10m.json"])
     data_file = Path.join([Application.app_dir(:algground), "priv/data/unemployment.tsv"])
-    IO.inspect(map_file)
 
     # Start from the last complete month
     today = Date.utc_today()
@@ -527,7 +528,6 @@ defmodule AlggroundWeb.LiveHomePage do
   defp get_municipality(municipalitys, municipality), do: List.first(Enum.filter(municipalitys, &(&1.municipality == municipality)))
 
   defp render_map(assigns) do
-    IO.inspect(assigns.map_file)
     spec = %{
       "$schema" => "https://vega.github.io/schema/vega-lite/v5.json",
       "description" => "Groundwater Levels - Last 5 Years (Quarterly Average)",
@@ -568,7 +568,7 @@ defmodule AlggroundWeb.LiveHomePage do
         }
       }],
       "projection" => %{
-        "type" => "albers"
+        "type" => "azimuthalEqualArea"
       },
       "mark" => "geoshape",
       "encoding" => %{
