@@ -550,29 +550,30 @@ defmodule AlggroundWeb.LiveHomePage do
       "data" => %{
         # "url" =>"https://raw.githubusercontent.com/vega/vega/refs/heads/main/docs/data/us-10m.json",
         # "url" => "https://raw.githubusercontent.com/leakyMirror/map-of-europe/27a335110674ae5b01a84d3501b227e661beea2b/TopoJSON/europe.topojson",
-        "url" => "https://raw.githubusercontent.com/stcoimbra/PowerBI-TopoJson-Portugal/refs/heads/main/concelhos_portugal%20(1).json",
+        # "url" => "https://raw.githubusercontent.com/stcoimbra/PowerBI-TopoJson-Portugal/refs/heads/main/concelhos_portugal%20(1).json",
+        "url" => "https://raw.githubusercontent.com/Levin/algarve-water-watch/refs/heads/dp_sandbox/priv/data/georef-portugal-distrito.topojson",
         "format" => %{
           "type" => "topojson",
           "feature" => "concelhos_portugal"
         }
       },
       "transform" => [%{
-        "lookup" => "id",
+        "lookup" => "dis_code",
         "from"=> %{
           "data" => %{
-            "url"=> "https://raw.githubusercontent.com/vega/vega/refs/heads/main/docs/data/unemployment.tsv",
+            "url"=> "https://raw.githubusercontent.com/Levin/algarve-water-watch/refs/heads/dp_sandbox/priv/data/test2.tsv",
           },
-          "key" => "id",
-          "fields" => ["rate"]
+          "key" => "dis_code",
+          "fields" => ["value"]
         }
       }],
       "projection" => %{
-        "type" => "albersUsa"
+        "type" => "albers"
       },
       "mark" => "geoshape",
       "encoding" => %{
         "color"=> %{
-          "field" => "rate",
+          "field" => "value",
           "type" => "quantitative"
         }
       }
