@@ -550,20 +550,20 @@ defmodule AlggroundWeb.LiveHomePage do
       "data" => %{
         # "url" =>"https://raw.githubusercontent.com/vega/vega/refs/heads/main/docs/data/us-10m.json",
         # "url" => "https://raw.githubusercontent.com/leakyMirror/map-of-europe/27a335110674ae5b01a84d3501b227e661beea2b/TopoJSON/europe.topojson",
-        # "url" => "https://raw.githubusercontent.com/stcoimbra/PowerBI-TopoJson-Portugal/refs/heads/main/concelhos_portugal%20(1).json",
-        "url" => "https://raw.githubusercontent.com/Levin/algarve-water-watch/refs/heads/dp_sandbox/priv/data/georef-portugal-distrito.topojson",
+        "url" => "https://raw.githubusercontent.com/stcoimbra/PowerBI-TopoJson-Portugal/refs/heads/main/concelhos_portugal%20(1).json",
+        # "url" => "https://raw.githubusercontent.com/Levin/algarve-water-watch/refs/heads/dp_sandbox/priv/data/georef-portugal-distrito.topojson",
         "format" => %{
           "type" => "topojson",
           "feature" => "concelhos_portugal"
         }
       },
       "transform" => [%{
-        "lookup" => "dis_code",
+        "lookup" => "properties.GID_1",
         "from"=> %{
           "data" => %{
-            "url"=> "https://raw.githubusercontent.com/Levin/algarve-water-watch/refs/heads/dp_sandbox/priv/data/test2.tsv",
+            "url"=> "https://raw.githubusercontent.com/Levin/algarve-water-watch/refs/heads/dp_sandbox/priv/data/test.tsv",
           },
-          "key" => "dis_code",
+          "key" => "GID_1",
           "fields" => ["value"]
         }
       }],
